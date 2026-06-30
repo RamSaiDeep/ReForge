@@ -102,4 +102,4 @@ If that question cannot be answered convincingly, restoration should not begin.
 
 ## Motto
 
-> **Software is never finished—only abandoned.**
+> **Preserving software worth preserving..**

@@ -46,3 +46,67 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Structured agent communication tasks as asynchronous operations (`async def run`).
   * *Rationale:* Prepares the system for non-blocking operations when calling remote APIs (e.g. GitHub/LLM providers).
 
+---
+
+## [Phase 2] Mock Persistence (2026-07-01)
+
+### Phase Status
+* **Goal:** Implement repository persistence adapters to allow project state retrieval, creation, and listing locally.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Implemented Repositories:** Created [repositories.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/repositories.py) providing:
+   * `InMemoryProjectRepository`: Pure dict storage for fast test executions.
+   * `JSONFileProjectRepository`: Local file system persistence serialization.
+2. **Added Verification Suites:** Wrote [test_repositories.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_repositories.py) covering save, get, list, file generation, and deep model serialization (checking nested `RepositoryProfile`).
+
+### Key Decisions & Rationale
+* **Decision:** Selected JSON file serialization over SQLite for mock local persistence.
+  * *Rationale:* Keeps data storage transparently inspectable for debugging and fits the archaeology documentation theme perfectly.
+* **Decision:** Implemented isolation copies during in-memory CRUD operations.
+  * *Rationale:* Prevents in-memory shared state reference mutation side effects, preserving strict transaction/persistence boundaries.
+
+---
+
+## [Phase 3] Stage 1 — Repository Discovery (Scout Agent) (2026-07-01)
+
+### Phase Status
+* **Goal:** Implement the Repository Scout Agent and the GitHub provider adapter to fetch repository metadata.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Defined Git Provider Abstraction:** Modified [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py) to declare `GitProvider`.
+2. **GitHub API Adapter Integration:** Created [github_provider.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/github_provider.py) using `httpx` to retrieve repository metadata, languages, contributor counts, and READMEs.
+3. **Repository Scout Agent:** Created [scout.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/scout.py) implementing the agent state flow and transaction logs.
+4. **Validation Test Suites:**
+   * Wrote [test_scout.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_scout.py) mocking `GitProvider` to verify state transitions and logs.
+   * Wrote [test_github_provider.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_github_provider.py) testing URL parsing and HTTP mock requests.
+
+### Key Decisions & Rationale
+* **Decision:** Passed `GitProvider` interface to the `ScoutAgent` use case via dependency injection.
+  * *Rationale:* Adheres to Clean Architecture, allowing us to easily swap `GitHubProvider` for a `GitLabProvider` or a mock file-based provider during local test execution.
+* **Decision:** Decoded RAW readme contents directly from GitHub API Accept Header (`Accept: application/vnd.github.raw`).
+  * *Rationale:* Avoids downloading base64 metadata wrappers and manual base64 decoding blocks, minimizing processing logic.
+
+---
+
+## [Phase 4] Stage 2 — Heritage Evaluation (Heritage Agent) (2026-07-01)
+
+### Phase Status
+* **Goal:** Implement the Heritage Evaluator agent usecase and calculate multidimensional preservation scores.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Heritage Scoring Logic:** Created [heritage.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/heritage.py) implementing 6-dimensional scoring rules (Historical Value, Community Value, Sustainability, Feasibility, Educational, Innovation) and determining worthiness of preservation.
+2. **Evaluator Tests:** Created [test_heritage.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_heritage.py) covering worthy historic repositories (like compilers), active unworthy new repositories, and error routes (missing profile state).
+3. **Updated Architecture Flowcharts:** Modified [architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) adding overall pipeline flowcharts, data flows for Stage 1/2, and class layouts using Mermaid.
+
+### Key Decisions & Rationale
+* **Decision:** Formulated an explainable weighted average scoring algorithm for the 6-dimension evaluation.
+  * *Rationale:* Ensures complete transparency, making every score fully debuggable and auditable.
+* **Decision:** Implemented automated condition check rules for "worth_preserving" flag based on overall score >= 50 or high individual category thresholds (historical/educational value >= 70).
+  * *Rationale:* Protects older/abandoned codebases with low modern community popularity but immense educational or historic significance from being automatically filtered out.
+
+
+
+

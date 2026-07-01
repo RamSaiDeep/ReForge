@@ -1,7 +1,27 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel
-from reforge.domain.models import ExcavationState
+from reforge.domain.models import ExcavationState, RepositoryProfile
+
+class GitProvider(ABC):
+    """Abstract interface for interacting with Git hosting platforms (e.g. GitHub)."""
+
+    @abstractmethod
+    async def fetch_profile(self, repo_url: str) -> RepositoryProfile:
+        """Fetch metadata for a remote repository and construct its profile.
+
+        Args:
+            repo_url: The full Git repository HTTP/HTTPS URL.
+
+        Returns:
+            A populated RepositoryProfile entity.
+
+        Raises:
+            ValueError: If the repository URL is invalid or malformed.
+            Exception: If fetching from the provider API fails.
+        """
+        pass
+
 
 class ProjectRepository(ABC):
     """Abstract interface for managing project excavation state persistence."""

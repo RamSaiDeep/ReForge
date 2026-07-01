@@ -142,7 +142,84 @@ stateDiagram-v2
 
 ---
 
-## 5. Architectural Principles
+## 5. Agent Flow Diagrams & Process Pipelines
+
+### Overall Process Pipeline (Stages 1 & 2)
+```mermaid
+flowchart TD
+    Start([Start Excavation]) --> ScoutInit[Initialize ScoutAgent]
+    ScoutInit --> ScoutRun[ScoutAgent.run]
+    ScoutRun -->|GitHub URL| FetchAPI[GitHub HTTP API]
+    FetchAPI -->|Parse Json Metadata| Profile[RepositoryProfile]
+    Profile --> SaveState1[(Save State: DISCOVERED)]
+    SaveState1 --> HeritageInit[Initialize HeritageEvaluator]
+    HeritageInit --> HeritageRun[HeritageEvaluator.run]
+    HeritageRun -->|Read Profile| ScoringEngine[Weighted Scoring Engine]
+    ScoringEngine -->|Historical, Community, Sustainability, etc.| Report[HeritageReport]
+    Report --> CheckWorthy{Is Worth Preserving?}
+    CheckWorthy -->|Yes| SaveState2[(Save State: EVALUATED)]
+    CheckWorthy -->|No| SaveStateStopped[(Save State: STOPPED)]
+    SaveState2 --> NextStage([Advance to Stage 3 - Understanding])
+    SaveStateStopped --> End([Excavation Terminated])
+```
+
+### Stage 1: Discovery (Scout Agent) Data Flow
+```mermaid
+flowchart LR
+    StateIn[(ExcavationState: PENDING)] --> ScoutAgent[ScoutAgent]
+    ScoutAgent -->|Parse URL| GitHubProvider[GitHubProvider]
+    GitHubProvider -->|1. GET Repo Meta| HTTP[GitHub REST API]
+    GitHubProvider -->|2. GET Languages| HTTP
+    GitHubProvider -->|3. GET README| HTTP
+    GitHubProvider -->|4. GET Contributors| HTTP
+    HTTP -->|Pydantic Validation| Profile[RepositoryProfile]
+    Profile --> ScoutAgent
+    ScoutAgent -->|Appends Log & Profile| StateOut[(ExcavationState: DISCOVERED)]
+```
+
+### Stage 2: Heritage Evaluation Data Flow
+```mermaid
+flowchart TD
+    StateIn[(ExcavationState: DISCOVERED)] --> HeritageEvaluator[HeritageEvaluator]
+    HeritageEvaluator --> ReadProfile[Read RepositoryProfile]
+    
+    ReadProfile --> HistoricalScore[Historical Score: Age + Keywords]
+    ReadProfile --> CommunityScore[Community Score: Log-scale Stars/Forks/Watchers]
+    ReadProfile --> SustainabilityScore[Activity Score: Commit Recency]
+    ReadProfile --> FeasibilityScore[Feasibility Score: Build System Headers]
+    ReadProfile --> EducationalScore[Educational Score: Tech keywords]
+    ReadProfile --> InnovationScore[Innovation Score: Language + novel descriptors]
+    
+    HistoricalScore & CommunityScore & SustainabilityScore & FeasibilityScore & EducationalScore & InnovationScore --> WeightedSum[Weighted Average calculation]
+    WeightedSum --> CheckWorthy{Score >= 50 or High Historic/Edu Value?}
+    CheckWorthy -->|True| Worthy[worth_preserving = True]
+    CheckWorthy -->|False| Unworthy[worth_preserving = False]
+    
+    Worthy & Unworthy --> GenReport[Construct HeritageReport]
+    GenReport --> StateOut[(ExcavationState: EVALUATED or STOPPED)]
+```
+
+---
+
+## 6. Implemented Package Layout
+
+The codebase implements Clean Architecture across these layers:
+
+### Core Domain
+* [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract `ProjectRepository`, `GitProvider`, and `ArchaeologyAgent` boundaries.
+* [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed data validation entities.
+
+### Use Cases (Workflow Executors)
+* [scout.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/scout.py): Coordinates discovery pipelines, error transitions, and explainable audit logs.
+* [heritage.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/heritage.py): Houses the 6-dimension scoring engine, preserving logic constraints.
+
+### Interface Adapters (Infrastructure Bridges)
+* [repositories.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/repositories.py): Outlines storage engines (In-Memory / JSON File).
+* [github_provider.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/github_provider.py): Interfaces remote HTTP endpoints, mapping platform data structures to clean domain contracts.
+
+---
+
+## 7. Architectural Principles
 
 1. **Strict Type Safety:** All agents must return instantiated Pydantic models. Any unstructured output or markdown must be wrapped inside a typed property (e.g., `explanation: str`).
 2. **Explainability First:** No evaluation score or restoration action can exist without a matching `explanation` property describing the *why*, *how*, and *impact*.

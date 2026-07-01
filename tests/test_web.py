@@ -10,6 +10,7 @@ from reforge.usecases.heritage import HeritageEvaluator
 from reforge.usecases.explorer import ExplorerAgent
 from reforge.usecases.supervisor import SupervisorWorkflow
 from reforge.usecases.architect import ArchitectAgent
+from reforge.usecases.restoration_planner import RestorationPlannerAgent
 from reforge.infrastructure.web import app, get_repository, get_supervisor
 
 # Setup test overrides
@@ -18,13 +19,15 @@ test_scout = AsyncMock(spec=ScoutAgent)
 test_heritage = AsyncMock(spec=HeritageEvaluator)
 test_explorer = AsyncMock(spec=ExplorerAgent)
 test_architect = AsyncMock(spec=ArchitectAgent)
+test_restoration_planner = AsyncMock(spec=RestorationPlannerAgent)
 
 test_supervisor = SupervisorWorkflow(
     repository=test_repository,
     scout_agent=test_scout,
     heritage_evaluator=test_heritage,
     explorer_agent=test_explorer,
-    architect_agent=test_architect
+    architect_agent=test_architect,
+    restoration_planner=test_restoration_planner
 )
 
 app.dependency_overrides[get_repository] = lambda: test_repository
@@ -127,11 +130,16 @@ def test_excavate_project_api():
         return MagicMock()
     test_architect.run.side_effect = architect_side
 
+    async def restoration_side(state):
+        state.status = ExcavationStatus.AWAITING_APPROVAL
+        return MagicMock()
+    test_restoration_planner.run.side_effect = restoration_side
+
     # Excavate
     response = client.post("/projects/exc-proj/excavate")
     assert response.status_code == status.HTTP_200_OK
     
     data = response.json()
-    assert data["status"] == "RECONSTRUCTED"
+    assert data["status"] == "AWAITING_APPROVAL"
     assert data["profile"]["name"] == "exc"
 

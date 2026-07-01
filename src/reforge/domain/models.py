@@ -144,6 +144,28 @@ class ArchitectureReport(BaseModel):
     explanation: str = Field(..., description="Explainable analysis of the system architecture")
 
 
+class RestorationIssue(BaseModel):
+    """An individual migration, dependency, or build issue identified during restoration planning."""
+    issue_type: str = Field(..., description="E.g., missing_dependency, deprecated_library, compatibility_issue, build_failure")
+    description: str = Field(..., description="Detailed description of the problem")
+    severity: str = Field(..., description="E.g., HIGH, MEDIUM, LOW")
+    recommended_fix: str = Field(..., description="Recommended fix or instructions to resolve this issue")
+
+
+class RestorationPlan(BaseModel):
+    """Stage 5 — Restoration Plan report detailing the migration and restoration strategy."""
+    issues: List[RestorationIssue] = Field(
+        default_factory=list, description="List of identified issues that need to be resolved"
+    )
+    steps: List[str] = Field(
+        default_factory=list, description="Step-by-step restoration action items/commands"
+    )
+    estimated_effort_hours: float = Field(
+        default=0.0, ge=0.0, description="Total estimated time required to restore the codebase"
+    )
+    explanation: str = Field(..., description="Explainable strategy summary of the restoration process")
+
+
 class ExcavationState(BaseModel):
     """The complete, mutable blackboard state representing a project's excavation status."""
     project_id: str = Field(..., description="Unique identifier for the excavation project")
@@ -168,9 +190,13 @@ class ExcavationState(BaseModel):
     architecture_report: Optional[ArchitectureReport] = Field(
         default=None, description="Architecture Reconstruction report from Stage 4"
     )
+    restoration_plan: Optional[RestorationPlan] = Field(
+        default=None, description="Restoration Plan strategy from Stage 5"
+    )
     
     audit_logs: List[AgentLog] = Field(
         default_factory=list, description="Audit logs tracking agent actions"
     )
+
 
 

@@ -199,6 +199,32 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Resolved module import identifiers based on string sub-path matching inside relative keys.
   * *Rationale:* Correctly resolves internal python imports like `from reforge.domain.models import ...` to file locations such as `src/reforge/domain/models.py` without requiring complex compiler class loaders or system path configurations.
 
+---
+
+## [Phase 9] Stage 5 — Restoration Planning (Restoration Agent) (2026-07-02)
+
+### Phase Status
+* **Goal:** Implement Stage 5 Restoration Planning to scan overviews and architecture reports, classify build/dependency/compatibility issues, estimate migration effort hours, and output the Restoration Plan.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Added Domain Models:**
+   * Updated [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py) to declare the `RestorationIssue` and `RestorationPlan` schemas and added the `restoration_plan` parameter on `ExcavationState`.
+2. **Restoration Planner Agent Usecase:** Created [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py) scanning overview parameters (missing configurations, empty dependencies, missing readmes) to assemble recommended fix steps, estimate effort hours, transition status to `AWAITING_APPROVAL`, and log audits.
+3. **Supervisor Integration:** Updated [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py) to append the Stage 5 restoration execution block immediately after Architect reconstructions.
+4. **FastAPI & DI Integration:** Updated [web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/web.py) to wire `RestorationPlannerAgent` singletons into `SupervisorWorkflow` startup bindings.
+5. **Validation Test Suites:**
+   * Created [test_restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_restoration_planner.py) verifying heuristic rules (missing build files triggers HIGH build warnings, missing docs triggers LOW warnings), effort time aggregators, and error runs.
+   * Updated [test_web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_web.py) and [test_supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_supervisor.py) to support constructor mocks and assert pipeline completions up to `AWAITING_APPROVAL` status.
+6. **Architecture blueprints:** Updated [architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) detailing Stage 5 data flows, sequence calls, and packages.
+
+### Key Decisions & Rationale
+* **Decision:** Advanced the workflow execution status to `AWAITING_APPROVAL` at the end of Stage 5.
+  * *Rationale:* Establishes a strict architectural gate: the system stops pipeline execution and awaits human verification of the proposed Restoration Plan before any file writes or codebase changes are executed, preventing unintended automated script side effects.
+* **Decision:** Extrapolated estimated effort hours based on issue severity weights (6.0 hours for HIGH, 3.0 for MEDIUM, 1.5 for LOW).
+  * *Rationale:* Provides clear, structured, and auditable complexity metrics for each repository before restoration work begins.
+
+
 
 
 

@@ -12,6 +12,10 @@ def mock_repository() -> InMemoryProjectRepository:
     return InMemoryProjectRepository()
 
 
+from reforge.usecases.explorer import ExplorerAgent
+from reforge.usecases.architect import ArchitectAgent
+from reforge.usecases.restoration_planner import RestorationPlannerAgent
+
 @pytest.fixture
 def mock_scout_agent() -> AsyncMock:
     agent = AsyncMock(spec=ScoutAgent)
@@ -27,12 +31,44 @@ def mock_heritage_evaluator() -> AsyncMock:
 
 
 @pytest.fixture
-def supervisor(mock_repository, mock_scout_agent, mock_heritage_evaluator) -> SupervisorWorkflow:
+def mock_explorer_agent() -> AsyncMock:
+    agent = AsyncMock(spec=ExplorerAgent)
+    agent.name = "Repository Explorer"
+    return agent
+
+
+@pytest.fixture
+def mock_architect_agent() -> AsyncMock:
+    agent = AsyncMock(spec=ArchitectAgent)
+    agent.name = "Software Architect"
+    return agent
+
+
+@pytest.fixture
+def mock_restoration_planner() -> AsyncMock:
+    agent = AsyncMock(spec=RestorationPlannerAgent)
+    agent.name = "Restoration Planner"
+    return agent
+
+
+@pytest.fixture
+def supervisor(
+    mock_repository,
+    mock_scout_agent,
+    mock_heritage_evaluator,
+    mock_explorer_agent,
+    mock_architect_agent,
+    mock_restoration_planner,
+) -> SupervisorWorkflow:
     return SupervisorWorkflow(
         repository=mock_repository,
         scout_agent=mock_scout_agent,
-        heritage_evaluator=mock_heritage_evaluator
+        heritage_evaluator=mock_heritage_evaluator,
+        explorer_agent=mock_explorer_agent,
+        architect_agent=mock_architect_agent,
+        restoration_planner=mock_restoration_planner
     )
+
 
 
 @pytest.mark.asyncio
@@ -187,3 +223,64 @@ async def test_execute_excavation_scout_failed(supervisor, mock_repository, mock
     assert final_state.status == ExcavationStatus.FAILED
     saved = await mock_repository.get_by_id("proj-failed")
     assert saved.status == ExcavationStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_execute_excavation_full_pipeline(
+    supervisor,
+    mock_repository,
+    mock_scout_agent,
+    mock_heritage_evaluator,
+    mock_explorer_agent,
+    mock_architect_agent,
+    mock_restoration_planner,
+):
+    await supervisor.create_project("proj-full", "https://github.com/example/full")
+
+    # Scout
+    mock_profile = MagicMock(spec=RepositoryProfile)
+    async def scout_side_effect(state: ExcavationState):
+        state.profile = mock_profile
+        state.status = ExcavationStatus.DISCOVERED
+        return mock_profile
+    mock_scout_agent.run.side_effect = scout_side_effect
+
+    # Heritage
+    mock_report = MagicMock(spec=HeritageReport)
+    mock_report.worth_preserving = True
+    async def heritage_side_effect(state: ExcavationState):
+        state.heritage_report = mock_report
+        state.status = ExcavationStatus.EVALUATED
+        return mock_report
+    mock_heritage_evaluator.run.side_effect = heritage_side_effect
+
+    # Explorer
+    async def explorer_side_effect(state: ExcavationState):
+        state.local_path = "/tmp/mock-repo-path"
+        state.status = ExcavationStatus.UNDERSTOOD
+        return MagicMock()
+    mock_explorer_agent.run.side_effect = explorer_side_effect
+
+    # Architect
+    async def architect_side_effect(state: ExcavationState):
+        state.status = ExcavationStatus.RECONSTRUCTED
+        return MagicMock()
+    mock_architect_agent.run.side_effect = architect_side_effect
+
+    # Restoration Planner
+    async def restoration_side_effect(state: ExcavationState):
+        state.status = ExcavationStatus.AWAITING_APPROVAL
+        return MagicMock()
+    mock_restoration_planner.run.side_effect = restoration_side_effect
+
+    # Run
+    final_state = await supervisor.execute_excavation("proj-full")
+
+    # Assert
+    assert final_state.status == ExcavationStatus.AWAITING_APPROVAL
+    mock_scout_agent.run.assert_called_once()
+    mock_heritage_evaluator.run.assert_called_once()
+    mock_explorer_agent.run.assert_called_once()
+    mock_architect_agent.run.assert_called_once()
+    mock_restoration_planner.run.assert_called_once()
+

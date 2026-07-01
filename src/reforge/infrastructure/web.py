@@ -21,6 +21,8 @@ app = FastAPI(
     version="0.1.0"
 )
 
+from reforge.usecases.restoration_planner import RestorationPlannerAgent
+
 # Global instances (blackboard adapters & drivers)
 # Default to standard project storage folder
 STORAGE_DIR = os.getenv("REFORGE_STORAGE_DIR", ".reforge_data")
@@ -35,6 +37,7 @@ scout_agent = ScoutAgent(git_provider=git_provider)
 heritage_evaluator = HeritageEvaluator()
 explorer_agent = ExplorerAgent(cloner=git_cloner, inspector=workspace_inspector)
 architect_agent = ArchitectAgent(analyzer=code_analyzer)
+restoration_planner = RestorationPlannerAgent()
 
 # Supervisor
 supervisor_workflow = SupervisorWorkflow(
@@ -42,8 +45,10 @@ supervisor_workflow = SupervisorWorkflow(
     scout_agent=scout_agent,
     heritage_evaluator=heritage_evaluator,
     explorer_agent=explorer_agent,
-    architect_agent=architect_agent
+    architect_agent=architect_agent,
+    restoration_planner=restoration_planner
 )
+
 
 
 

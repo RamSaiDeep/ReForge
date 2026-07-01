@@ -5,6 +5,7 @@ from reforge.usecases.scout import ScoutAgent
 from reforge.usecases.heritage import HeritageEvaluator
 from reforge.usecases.explorer import ExplorerAgent
 from reforge.usecases.architect import ArchitectAgent
+from reforge.usecases.restoration_planner import RestorationPlannerAgent
 
 class SupervisorWorkflow:
     """The Supervisor coordinates all specialized agents and controls the excavation workflow state transitions.
@@ -18,13 +19,15 @@ class SupervisorWorkflow:
         scout_agent: ScoutAgent,
         heritage_evaluator: HeritageEvaluator,
         explorer_agent: ExplorerAgent,
-        architect_agent: ArchitectAgent
+        architect_agent: ArchitectAgent,
+        restoration_planner: RestorationPlannerAgent
     ) -> None:
         self.repository = repository
         self.scout_agent = scout_agent
         self.heritage_evaluator = heritage_evaluator
         self.explorer_agent = explorer_agent
         self.architect_agent = architect_agent
+        self.restoration_planner = restoration_planner
 
     async def create_project(self, project_id: str, repository_url: str) -> ExcavationState:
         """Initialize a new excavation project and save its initial state."""
@@ -106,6 +109,17 @@ class SupervisorWorkflow:
                 return state
             await self.repository.save(state)
 
+        # Stage 5: Restoration Planning (Restoration Planner Agent)
+        if state.status in (ExcavationStatus.RECONSTRUCTED, ExcavationStatus.RESTORATION_PLANNING):
+            try:
+                await self.restoration_planner.run(state)
+            except Exception:
+                # Restoration Planner agent has already updated status to FAILED and logged the error
+                await self.repository.save(state)
+                return state
+            await self.repository.save(state)
+
         return state
+
 
 

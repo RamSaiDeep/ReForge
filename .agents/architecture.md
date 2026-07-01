@@ -259,6 +259,21 @@ flowchart TD
     ArchitectAgent -->|Appends Log & Report| StateOut[(ExcavationState: RECONSTRUCTED)]
 ```
 
+### Stage 5: Restoration Planning (Restoration Planner Agent) Data Flow
+```mermaid
+flowchart TD
+    StateIn[(ExcavationState: RECONSTRUCTED)] --> RestorationPlannerAgent[RestorationPlannerAgent]
+    RestorationPlannerAgent -->|1. Inspect SoftwareOverview| Scanner[Heuristic scanner rules]
+    RestorationPlannerAgent -->|2. Inspect ArchitectureReport| Scanner
+    Scanner -->|Rule 1: Check build system| Issue1[HIGH: missing build system]
+    Scanner -->|Rule 2: Check dependencies| Issue2[MEDIUM: empty dependencies]
+    Scanner -->|Rule 3: Check docs| Issue3[LOW: missing documentation]
+    Issue1 & Issue2 & Issue3 --> BuildPlan[Assemble RestorationPlan & recommended steps]
+    BuildPlan -->|Sum severity weight hours| Effort[Effort Estimation hours]
+    Effort --> RestorationPlannerAgent
+    RestorationPlannerAgent -->|Appends Log & Plan| StateOut[(ExcavationState: AWAITING_APPROVAL)]
+```
+
 ### Supervisor Orchestration Sequence Flow
 ```mermaid
 sequenceDiagram
@@ -270,6 +285,7 @@ sequenceDiagram
     participant Heritage as HeritageEvaluator
     participant Explorer as ExplorerAgent
     participant Architect as ArchitectAgent
+    participant Restoration as RestorationPlannerAgent
 
     Client->>Supervisor: create_project(project_id, repo_url)
     Supervisor->>DB: save(state: PENDING)
@@ -310,6 +326,14 @@ sequenceDiagram
     Architect-->>Supervisor: Return report (state: RECONSTRUCTED)
     Supervisor->>DB: save(state)
 
+    Note over Supervisor,Restoration: Stage 5: Restoration Planning
+    Supervisor->>Restoration: run(state)
+    Restoration->>Restoration: Analyze overview & modules
+    Restoration->>Restoration: List issues & compile steps
+    Restoration->>Restoration: Append success/fail AgentLog
+    Restoration-->>Supervisor: Return plan (state: AWAITING_APPROVAL)
+    Supervisor->>DB: save(state)
+
     Supervisor-->>Client: Return final ExcavationState
 ```
 
@@ -321,13 +345,14 @@ The codebase implements Clean Architecture across these layers:
 
 ### Core Domain
 * [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract boundaries: `ProjectRepository`, `GitProvider`, `GitCloner`, `WorkspaceInspector`, `CodeAnalyzer`, and `ArchaeologyAgent`.
-* [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed Pydantic validation entities (such as `RepositoryProfile`, `HeritageReport`, `SoftwareOverview`, `ArchitectureReport`, `AgentLog`, `ExcavationState`).
+* [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed Pydantic validation entities (such as `RepositoryProfile`, `HeritageReport`, `SoftwareOverview`, `ArchitectureReport`, `RestorationIssue`, `RestorationPlan`, `AgentLog`, `ExcavationState`).
 
 ### Use Cases (Workflow Executors)
 * [scout.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/scout.py): Coordinates Stage 1 discovery pipelines.
 * [heritage.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/heritage.py): Houses Stage 2 heritage evaluation.
 * [explorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/explorer.py): Manages Stage 3 directory cloning and crawling workflow.
 * [architect.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/architect.py): Manages Stage 4 source code AST/regex dependency extraction.
+* [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py): Manages Stage 5 restoration issue detection and effort hours compile.
 * [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py): Coordinates the execution order of individual agents, manages state persistence across transitions, and applies validation checkpoints.
 
 ### Interface Adapters (Infrastructure Bridges)
@@ -351,7 +376,7 @@ flowchart LR
     Client([HTTP Client]) -->|JSON request| WebApp[web.py REST Controllers]
     WebApp -->|Depends injection| Usecase[SupervisorWorkflow]
     Usecase -->|Query/Save state| DB[(JSONFileProjectRepository)]
-    Usecase -->|Trigger tasks| Agents[Scout, Heritage, Explorer, Architect Agents]
+    Usecase -->|Trigger tasks| Agents[Scout, Heritage, Explorer, Architect, Restorer Agents]
 ```
 
 ### Endpoints Specification
@@ -363,9 +388,9 @@ flowchart LR
   * **Errors:** `400 Bad Request` if `project_id` already exists.
 
 * **`POST /projects/{project_id}/excavate`**
-  * **Description:** Runs all active agent stages (Stage 1 Discovery -> Stage 2 Heritage -> Stage 3 Understanding -> Stage 4 Reconstruction) sequentially and updates state.
+  * **Description:** Runs all active agent stages (Stage 1 Discovery -> Stage 2 Heritage -> Stage 3 Understanding -> Stage 4 Reconstruction -> Stage 5 Restoration Planning) sequentially and updates state.
   * **Request Body:** `{ "force_continue": bool }` (Optional, defaults to false. Allows overriding low heritage scores).
-  * **Response:** status `200 OK` returning final `ExcavationState`.
+  * **Response:** status `200 OK` returning final `ExcavationState` (reaches `AWAITING_APPROVAL` status on success).
   * **Errors:** `404 Not Found` if project record does not exist.
 
 * **`GET /projects/{project_id}`**
@@ -384,3 +409,4 @@ flowchart LR
 1. **Strict Type Safety:** All agents must return instantiated Pydantic models. Any unstructured output or markdown must be wrapped inside a typed property (e.g., `explanation: str`).
 2. **Explainability First:** No evaluation score or restoration action can exist without a matching `explanation` property describing the *why*, *how*, and *impact*.
 3. **Database Independence:** Interface repositories will hide the actual database (PostgreSQL/JSON) behind abstract interfaces, ensuring the code can run locally using mock repositories during test runs.
+

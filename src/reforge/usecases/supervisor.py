@@ -3,6 +3,8 @@ from reforge.domain.interfaces import ProjectRepository
 from reforge.domain.models import ExcavationState, ExcavationStatus
 from reforge.usecases.scout import ScoutAgent
 from reforge.usecases.heritage import HeritageEvaluator
+from reforge.usecases.explorer import ExplorerAgent
+from reforge.usecases.architect import ArchitectAgent
 
 class SupervisorWorkflow:
     """The Supervisor coordinates all specialized agents and controls the excavation workflow state transitions.
@@ -14,11 +16,15 @@ class SupervisorWorkflow:
         self,
         repository: ProjectRepository,
         scout_agent: ScoutAgent,
-        heritage_evaluator: HeritageEvaluator
+        heritage_evaluator: HeritageEvaluator,
+        explorer_agent: ExplorerAgent,
+        architect_agent: ArchitectAgent
     ) -> None:
         self.repository = repository
         self.scout_agent = scout_agent
         self.heritage_evaluator = heritage_evaluator
+        self.explorer_agent = explorer_agent
+        self.architect_agent = architect_agent
 
     async def create_project(self, project_id: str, repository_url: str) -> ExcavationState:
         """Initialize a new excavation project and save its initial state."""
@@ -81,6 +87,25 @@ class SupervisorWorkflow:
             await self.repository.save(state)
 
         # Stage 3: Software Understanding (Explorer Agent)
-        # Pending implementation in future phases. Currently transitions stop here.
+        if state.status in (ExcavationStatus.EVALUATED, ExcavationStatus.UNDERSTANDING):
+            try:
+                await self.explorer_agent.run(state)
+            except Exception:
+                # Explorer agent has already updated status to FAILED and logged the error
+                await self.repository.save(state)
+                return state
+            await self.repository.save(state)
+
+        # Stage 4: Architecture Reconstruction (Architect Agent)
+        if state.status in (ExcavationStatus.UNDERSTOOD, ExcavationStatus.RECONSTRUCTING):
+            try:
+                await self.architect_agent.run(state)
+            except Exception:
+                # Architect agent has already updated status to FAILED and logged the error
+                await self.repository.save(state)
+                return state
+            await self.repository.save(state)
 
         return state
+
+

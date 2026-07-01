@@ -16,6 +16,8 @@ from reforge.usecases.explorer import ExplorerAgent
 from reforge.usecases.architect import ArchitectAgent
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
 
+from reforge.usecases.restorer import RestorerAgent
+
 @pytest.fixture
 def mock_scout_agent() -> AsyncMock:
     agent = AsyncMock(spec=ScoutAgent)
@@ -52,6 +54,13 @@ def mock_restoration_planner() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_restorer_agent() -> AsyncMock:
+    agent = AsyncMock(spec=RestorerAgent)
+    agent.name = "Restorer Agent"
+    return agent
+
+
+@pytest.fixture
 def supervisor(
     mock_repository,
     mock_scout_agent,
@@ -59,6 +68,7 @@ def supervisor(
     mock_explorer_agent,
     mock_architect_agent,
     mock_restoration_planner,
+    mock_restorer_agent
 ) -> SupervisorWorkflow:
     return SupervisorWorkflow(
         repository=mock_repository,
@@ -66,7 +76,8 @@ def supervisor(
         heritage_evaluator=mock_heritage_evaluator,
         explorer_agent=mock_explorer_agent,
         architect_agent=mock_architect_agent,
-        restoration_planner=mock_restoration_planner
+        restoration_planner=mock_restoration_planner,
+        restorer_agent=mock_restorer_agent
     )
 
 
@@ -283,4 +294,41 @@ async def test_execute_excavation_full_pipeline(
     mock_explorer_agent.run.assert_called_once()
     mock_architect_agent.run.assert_called_once()
     mock_restoration_planner.run.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_approve_and_restore_success(supervisor, mock_repository, mock_restorer_agent):
+    # Setup project in awaiting approval
+    state = ExcavationState(
+        project_id="app-proj",
+        repository_url="https://github.com/example/app",
+        status=ExcavationStatus.AWAITING_APPROVAL
+    )
+    await mock_repository.save(state)
+
+    async def restorer_side(state):
+        state.status = ExcavationStatus.RESTORED
+        return []
+    mock_restorer_agent.run.side_effect = restorer_side
+
+    # Execute
+    updated_state = await supervisor.approve_and_restore("app-proj")
+    
+    assert updated_state.status == ExcavationStatus.RESTORED
+    mock_restorer_agent.run.assert_called_once_with(state)
+
+
+@pytest.mark.asyncio
+async def test_approve_and_restore_invalid_status(supervisor, mock_repository):
+    # Project is in PENDING state
+    state = ExcavationState(
+        project_id="app-pending",
+        repository_url="https://github.com/example/pending",
+        status=ExcavationStatus.PENDING
+    )
+    await mock_repository.save(state)
+
+    with pytest.raises(ValueError, match="must be in AWAITING_APPROVAL status"):
+        await supervisor.approve_and_restore("app-pending")
+
 

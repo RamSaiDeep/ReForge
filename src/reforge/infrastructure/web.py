@@ -22,6 +22,8 @@ app = FastAPI(
 )
 
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
+from reforge.usecases.restorer import RestorerAgent
+from reforge.adapters.restoration_executor import LocalRestorationExecutor
 
 # Global instances (blackboard adapters & drivers)
 # Default to standard project storage folder
@@ -31,6 +33,7 @@ git_provider = GitHubProvider()
 git_cloner = LocalGitCloner()
 workspace_inspector = LocalWorkspaceInspector()
 code_analyzer = LocalCodeAnalyzer()
+restoration_executor = LocalRestorationExecutor()
 
 # Agents
 scout_agent = ScoutAgent(git_provider=git_provider)
@@ -38,6 +41,7 @@ heritage_evaluator = HeritageEvaluator()
 explorer_agent = ExplorerAgent(cloner=git_cloner, inspector=workspace_inspector)
 architect_agent = ArchitectAgent(analyzer=code_analyzer)
 restoration_planner = RestorationPlannerAgent()
+restorer_agent = RestorerAgent(executor=restoration_executor)
 
 # Supervisor
 supervisor_workflow = SupervisorWorkflow(
@@ -46,7 +50,8 @@ supervisor_workflow = SupervisorWorkflow(
     heritage_evaluator=heritage_evaluator,
     explorer_agent=explorer_agent,
     architect_agent=architect_agent,
-    restoration_planner=restoration_planner
+    restoration_planner=restoration_planner,
+    restorer_agent=restorer_agent
 )
 
 
@@ -131,6 +136,27 @@ async def get_project(
             detail=f"Project with ID '{project_id}' not found."
         )
     return state
+
+
+@app.post(
+    "/projects/{project_id}/approve",
+    response_model=ExcavationState,
+    summary="Approve restoration plan and run codebase restoration",
+)
+async def approve_project_restoration(
+    project_id: str,
+    supervisor: SupervisorWorkflow = Depends(get_supervisor)
+):
+    try:
+        state = await supervisor.approve_and_restore(project_id=project_id)
+        return state
+    except ValueError as err:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(err))
+    except Exception as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Restoration run failure: {str(err)}"
+        )
 
 
 @app.get(

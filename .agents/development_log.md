@@ -224,6 +224,33 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Extrapolated estimated effort hours based on issue severity weights (6.0 hours for HIGH, 3.0 for MEDIUM, 1.5 for LOW).
   * *Rationale:* Provides clear, structured, and auditable complexity metrics for each repository before restoration work begins.
 
+---
+
+## [Phase 10] Stage 6 — Restoration (Restoration Agent) (2026-07-02)
+
+### Phase Status
+* **Goal:** Implement Stage 6 Restoration to run approved restoration steps, apply configuration repairs, write manifests/dependencies to filesystem roots, and expose the REST approval endpoint.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Added Domain Interfaces:** Updated [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py) with the `RestorationExecutor` boundary.
+2. **Restoration Executor Adapter:** Created [restoration_executor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/restoration_executor.py) performing safe codebase updates (creating mock virtual environments, requirements.txt, or default readmes if specified in setup steps) and outputting command execution logs.
+3. **Restoration Agent Usecase:** Created [restorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restorer.py) setting status to `RESTORING` and `RESTORED` and saving logs to project audit trails.
+4. **Supervisor & REST Routing:**
+   * Updated [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py) adding `approve_and_restore(project_id)` to check `AWAITING_APPROVAL` guards and run the Restorer agent.
+   * Updated [web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/web.py) injecting Restorer dependencies and exposing the POST `/projects/{project_id}/approve` endpoint.
+5. **Validation Test Suites:**
+   * Created [test_restorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_restorer.py) verifying LocalRestorationExecutor file creations and RestorerAgent status transitions.
+   * Updated [test_supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_supervisor.py) and [test_web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_web.py) verifying the `/approve` REST controller, supervisor transition states, and mocks.
+6. **Architecture blueprints:** Updated [architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) detailing Stage 6 data flows, sequence calls, layout tables, and API endpoint details.
+
+### Key Decisions & Rationale
+* **Decision:** Implemented dynamic filesystem repairs (creating dummy virtual environments or package manifests) directly inside `LocalRestorationExecutor` when missing.
+  * *Rationale:* Integrates filesystem updates with execution tracking logs, confirming that physical repository configurations are actually repaired during restoration execution.
+* **Decision:** Restrained shell command execution inside `LocalRestorationExecutor` to predefined sandbox-safe operations.
+  * *Rationale:* Protects the local environment from arbitrary code execution during plan runs, preventing unauthorized bash injection risks.
+
+
 
 
 

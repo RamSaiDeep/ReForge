@@ -143,3 +143,23 @@ def test_excavate_project_api():
     assert data["status"] == "AWAITING_APPROVAL"
     assert data["profile"]["name"] == "exc"
 
+
+def test_approve_restoration_api():
+    # Setup project
+    client.post("/projects", json={"project_id": "approve-proj", "repository_url": "https://github.com/app"})
+
+    # Setup supervisor mock behavior
+    async def approve_mock(project_id):
+        # Retrieve state from repo and update
+        state = await test_repository.get_by_id(project_id)
+        state.status = ExcavationStatus.RESTORED
+        return state
+        
+    test_supervisor.approve_and_restore = approve_mock
+
+    # Approve
+    response = client.post("/projects/approve-proj/approve")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["status"] == "RESTORED"
+
+

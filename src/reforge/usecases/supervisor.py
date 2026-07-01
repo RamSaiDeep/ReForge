@@ -7,6 +7,8 @@ from reforge.usecases.explorer import ExplorerAgent
 from reforge.usecases.architect import ArchitectAgent
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
 
+from reforge.usecases.restorer import RestorerAgent
+
 class SupervisorWorkflow:
     """The Supervisor coordinates all specialized agents and controls the excavation workflow state transitions.
 
@@ -20,7 +22,8 @@ class SupervisorWorkflow:
         heritage_evaluator: HeritageEvaluator,
         explorer_agent: ExplorerAgent,
         architect_agent: ArchitectAgent,
-        restoration_planner: RestorationPlannerAgent
+        restoration_planner: RestorationPlannerAgent,
+        restorer_agent: RestorerAgent
     ) -> None:
         self.repository = repository
         self.scout_agent = scout_agent
@@ -28,6 +31,7 @@ class SupervisorWorkflow:
         self.explorer_agent = explorer_agent
         self.architect_agent = architect_agent
         self.restoration_planner = restoration_planner
+        self.restorer_agent = restorer_agent
 
     async def create_project(self, project_id: str, repository_url: str) -> ExcavationState:
         """Initialize a new excavation project and save its initial state."""
@@ -120,6 +124,27 @@ class SupervisorWorkflow:
             await self.repository.save(state)
 
         return state
+
+    async def approve_and_restore(self, project_id: str) -> ExcavationState:
+        """Approve the Restoration Plan and run Stage 6 (Restoration) to apply modifications."""
+        state = await self.repository.get_by_id(project_id)
+        if not state:
+            raise ValueError(f"Project with ID '{project_id}' does not exist.")
+            
+        if state.status not in (ExcavationStatus.AWAITING_APPROVAL, ExcavationStatus.RESTORING, ExcavationStatus.FAILED):
+            raise ValueError(
+                f"Cannot execute restoration. Project must be in AWAITING_APPROVAL status. Current: {state.status}"
+            )
+            
+        try:
+            await self.restorer_agent.run(state)
+        except Exception:
+            await self.repository.save(state)
+            return state
+            
+        await self.repository.save(state)
+        return state
+
 
 
 

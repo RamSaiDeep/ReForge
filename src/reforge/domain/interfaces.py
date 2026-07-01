@@ -1,7 +1,24 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel
-from reforge.domain.models import ExcavationState, RepositoryProfile, SoftwareOverview, ArchitectureReport
+from reforge.domain.models import ExcavationState, RepositoryProfile, SoftwareOverview, ArchitectureReport, RestorationPlan
+
+class RestorationExecutor(ABC):
+    """Abstract interface for executing approved restoration plan steps on a codebase workspace."""
+
+    @abstractmethod
+    async def execute(self, local_path: str, plan: RestorationPlan) -> List[str]:
+        """Execute the migration/restoration instructions and return log outputs.
+
+        Args:
+            local_path: The local filesystem path of the repository workspace.
+            plan: The approved RestorationPlan containing issues and setup steps.
+
+        Returns:
+            A list of execution output strings/logs.
+        """
+        pass
+
 
 class CodeAnalyzer(ABC):
     """Abstract interface for analyzing codebases and reconstructing their internal architecture."""

@@ -274,6 +274,17 @@ flowchart TD
     RestorationPlannerAgent -->|Appends Log & Plan| StateOut[(ExcavationState: AWAITING_APPROVAL)]
 ```
 
+### Stage 6: Restoration (Restorer Agent) Data Flow
+```mermaid
+flowchart TD
+    StateIn[(ExcavationState: AWAITING_APPROVAL)] --> RestorerAgent[RestorerAgent]
+    RestorerAgent -->|1. Call RestorationExecutor.execute| RestorationExecutor[RestorationExecutor / Filesystem wrapper]
+    RestorationExecutor -->|Write files| MockEnv[Create virtual env / write manifests]
+    RestorationExecutor -->|Run shell setup| SetupLogs[Generate restore execution logs]
+    SetupLogs --> RestorerAgent
+    RestorerAgent -->|Appends Log & Execution log| StateOut[(ExcavationState: RESTORED)]
+```
+
 ### Supervisor Orchestration Sequence Flow
 ```mermaid
 sequenceDiagram
@@ -286,6 +297,7 @@ sequenceDiagram
     participant Explorer as ExplorerAgent
     participant Architect as ArchitectAgent
     participant Restoration as RestorationPlannerAgent
+    participant Restorer as RestorerAgent
 
     Client->>Supervisor: create_project(project_id, repo_url)
     Supervisor->>DB: save(state: PENDING)
@@ -334,7 +346,14 @@ sequenceDiagram
     Restoration-->>Supervisor: Return plan (state: AWAITING_APPROVAL)
     Supervisor->>DB: save(state)
 
-    Supervisor-->>Client: Return final ExcavationState
+    Client->>Supervisor: approve_and_restore(project_id)
+    Note over Supervisor,Restorer: Stage 6: Restoration (User Approved)
+    Supervisor->>Restorer: run(state)
+    Restorer->>Restorer: Execute setup steps & write configurations
+    Restorer->>Restorer: Append success/fail AgentLog
+    Restorer-->>Supervisor: Return execution logs (state: RESTORED)
+    Supervisor->>DB: save(state)
+    Supervisor-->>Client: Return final restored state
 ```
 
 ---
@@ -344,7 +363,7 @@ sequenceDiagram
 The codebase implements Clean Architecture across these layers:
 
 ### Core Domain
-* [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract boundaries: `ProjectRepository`, `GitProvider`, `GitCloner`, `WorkspaceInspector`, `CodeAnalyzer`, and `ArchaeologyAgent`.
+* [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract boundaries: `ProjectRepository`, `GitProvider`, `GitCloner`, `WorkspaceInspector`, `CodeAnalyzer`, `RestorationExecutor`, and `ArchaeologyAgent`.
 * [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed Pydantic validation entities (such as `RepositoryProfile`, `HeritageReport`, `SoftwareOverview`, `ArchitectureReport`, `RestorationIssue`, `RestorationPlan`, `AgentLog`, `ExcavationState`).
 
 ### Use Cases (Workflow Executors)
@@ -353,6 +372,7 @@ The codebase implements Clean Architecture across these layers:
 * [explorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/explorer.py): Manages Stage 3 directory cloning and crawling workflow.
 * [architect.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/architect.py): Manages Stage 4 source code AST/regex dependency extraction.
 * [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py): Manages Stage 5 restoration issue detection and effort hours compile.
+* [restorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restorer.py): Manages Stage 6 migration command simulation and configuration repair.
 * [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py): Coordinates the execution order of individual agents, manages state persistence across transitions, and applies validation checkpoints.
 
 ### Interface Adapters (Infrastructure Bridges)
@@ -361,6 +381,7 @@ The codebase implements Clean Architecture across these layers:
 * [git_cloner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/git_cloner.py): Wraps shell subprocess `git clone` executions, detailing sandboxed fallbacks.
 * [workspace_inspector.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/workspace_inspector.py): Crawls and inspects local directories using OS file system APIs.
 * [code_analyzer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/code_analyzer.py): Scans files for programming language imports and constructs dependency maps.
+* [restoration_executor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/restoration_executor.py): Executes commands or applies file configurations to repair workspace builds.
 
 ### Frameworks & Drivers
 * [web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/web.py): Instantiates the FastAPI application, coordinates singleton dependency injection (wiring repositories, provider adapters, and agent engines), and implements REST controller routing handlers.
@@ -392,6 +413,11 @@ flowchart LR
   * **Request Body:** `{ "force_continue": bool }` (Optional, defaults to false. Allows overriding low heritage scores).
   * **Response:** status `200 OK` returning final `ExcavationState` (reaches `AWAITING_APPROVAL` status on success).
   * **Errors:** `404 Not Found` if project record does not exist.
+
+* **`POST /projects/{project_id}/approve`**
+  * **Description:** Approve the generated restoration plan and trigger Stage 6 (Restoration) to run command steps and apply config repairs.
+  * **Response:** status `200 OK` returning the updated `ExcavationState` in `RESTORED` status.
+  * **Errors:** `400 Bad Request` if project status is not `AWAITING_APPROVAL`.
 
 * **`GET /projects/{project_id}`**
   * **Description:** Retrieve full state details for a specific excavation project (including logs, profile, reports).

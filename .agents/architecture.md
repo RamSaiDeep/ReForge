@@ -285,6 +285,19 @@ flowchart TD
     RestorerAgent -->|Appends Log & Execution log| StateOut[(ExcavationState: RESTORED)]
 ```
 
+### Stage 7: Evolution Planning (Evolution Planner Agent) Data Flow
+```mermaid
+flowchart TD
+    StateIn[(ExcavationState: RESTORED)] --> EvolutionPlannerAgent[EvolutionPlannerAgent]
+    EvolutionPlannerAgent -->|1. Scan SoftwareOverview & ArchitectureReport| Scanner[Heuristic scanner rules]
+    Scanner -->|Rule 1: Check lock files| Suggest1[performance_improvement: Modern Lock Files]
+    Scanner -->|Rule 2: Check code linters| Suggest2[security_improvement: Code Quality Guards]
+    Scanner -->|Rule 3: Framework-specific scan| Suggest3[framework_upgrade / new_capability suggestion]
+    Suggest1 & Suggest2 & Suggest3 --> GenReport[Construct EvolutionReport]
+    GenReport --> EvolutionPlannerAgent
+    EvolutionPlannerAgent -->|Appends Log & Suggestions| StateOut[(ExcavationState: COMPLETED)]
+```
+
 ### Supervisor Orchestration Sequence Flow
 ```mermaid
 sequenceDiagram
@@ -298,6 +311,7 @@ sequenceDiagram
     participant Architect as ArchitectAgent
     participant Restoration as RestorationPlannerAgent
     participant Restorer as RestorerAgent
+    participant Evolution as EvolutionPlannerAgent
 
     Client->>Supervisor: create_project(project_id, repo_url)
     Supervisor->>DB: save(state: PENDING)
@@ -353,7 +367,15 @@ sequenceDiagram
     Restorer->>Restorer: Append success/fail AgentLog
     Restorer-->>Supervisor: Return execution logs (state: RESTORED)
     Supervisor->>DB: save(state)
-    Supervisor-->>Client: Return final restored state
+
+    Note over Supervisor,Evolution: Stage 7: Evolution Planning (Auto Run)
+    Supervisor->>Evolution: run(state)
+    Evolution->>Evolution: Analyze structures & frameworks
+    Evolution->>Evolution: Recommend lock files, linters & upgrades
+    Evolution->>Evolution: Append success/fail AgentLog
+    Evolution-->>Supervisor: Return evolution report (state: COMPLETED)
+    Supervisor->>DB: save(state)
+    Supervisor-->>Client: Return final completed state
 ```
 
 ---
@@ -364,7 +386,7 @@ The codebase implements Clean Architecture across these layers:
 
 ### Core Domain
 * [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract boundaries: `ProjectRepository`, `GitProvider`, `GitCloner`, `WorkspaceInspector`, `CodeAnalyzer`, `RestorationExecutor`, and `ArchaeologyAgent`.
-* [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed Pydantic validation entities (such as `RepositoryProfile`, `HeritageReport`, `SoftwareOverview`, `ArchitectureReport`, `RestorationIssue`, `RestorationPlan`, `AgentLog`, `ExcavationState`).
+* [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed Pydantic validation entities (such as `RepositoryProfile`, `HeritageReport`, `SoftwareOverview`, `ArchitectureReport`, `RestorationIssue`, `RestorationPlan`, `EvolutionSuggestion`, `EvolutionReport`, `AgentLog`, `ExcavationState`).
 
 ### Use Cases (Workflow Executors)
 * [scout.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/scout.py): Coordinates Stage 1 discovery pipelines.
@@ -373,6 +395,7 @@ The codebase implements Clean Architecture across these layers:
 * [architect.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/architect.py): Manages Stage 4 source code AST/regex dependency extraction.
 * [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py): Manages Stage 5 restoration issue detection and effort hours compile.
 * [restorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restorer.py): Manages Stage 6 migration command simulation and configuration repair.
+* [evolution_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/evolution_planner.py): Manages Stage 7 future upgrade recommendations.
 * [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py): Coordinates the execution order of individual agents, manages state persistence across transitions, and applies validation checkpoints.
 
 ### Interface Adapters (Infrastructure Bridges)
@@ -397,7 +420,7 @@ flowchart LR
     Client([HTTP Client]) -->|JSON request| WebApp[web.py REST Controllers]
     WebApp -->|Depends injection| Usecase[SupervisorWorkflow]
     Usecase -->|Query/Save state| DB[(JSONFileProjectRepository)]
-    Usecase -->|Trigger tasks| Agents[Scout, Heritage, Explorer, Architect, Restorer Agents]
+    Usecase -->|Trigger tasks| Agents[Scout, Heritage, Explorer, Architect, Restorer, Evolution Agents]
 ```
 
 ### Endpoints Specification
@@ -415,13 +438,27 @@ flowchart LR
   * **Errors:** `404 Not Found` if project record does not exist.
 
 * **`POST /projects/{project_id}/approve`**
-  * **Description:** Approve the generated restoration plan and trigger Stage 6 (Restoration) to run command steps and apply config repairs.
-  * **Response:** status `200 OK` returning the updated `ExcavationState` in `RESTORED` status.
+  * **Description:** Approve the generated restoration plan, run Stage 6 (Restoration) and Stage 7 (Evolution Planning) to complete the excavation pipeline.
+  * **Response:** status `200 OK` returning the updated `ExcavationState` in `COMPLETED` status.
   * **Errors:** `400 Bad Request` if project status is not `AWAITING_APPROVAL`.
 
 * **`GET /projects/{project_id}`**
   * **Description:** Retrieve full state details for a specific excavation project (including logs, profile, reports).
   * **Response:** status `200 OK` with `ExcavationState` JSON.
+  * **Errors:** `404 Not Found` if project is missing.
+
+* **`GET /projects`**
+  * **Description:** List all active excavation project state records in local persistence.
+  * **Response:** status `200 OK` returning a JSON list of `ExcavationState` objects.
+
+---
+
+## 8. Architectural Principles
+
+1. **Strict Type Safety:** All agents must return instantiated Pydantic models. Any unstructured output or markdown must be wrapped inside a typed property (e.g., `explanation: str`).
+2. **Explainability First:** No evaluation score or restoration action can exist without a matching `explanation` property describing the *why*, *how*, and *impact*.
+3. **Database Independence:** Interface repositories will hide the actual database (PostgreSQL/JSON) behind abstract interfaces, ensuring the code can run locally using mock repositories during test runs.
+te` JSON.
   * **Errors:** `404 Not Found` if project is missing.
 
 * **`GET /projects`**

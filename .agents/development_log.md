@@ -250,6 +250,31 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Restrained shell command execution inside `LocalRestorationExecutor` to predefined sandbox-safe operations.
   * *Rationale:* Protects the local environment from arbitrary code execution during plan runs, preventing unauthorized bash injection risks.
 
+---
+
+## [Phase 11] Stage 7 — Evolution Planning (Evolution Agent) (2026-07-02)
+
+### Phase Status
+* **Goal:** Implement Stage 7 Evolution Planning to scan restored codebases for structure and frameworks, compile long-term optimization recommendations (dependency locking, quality linters, async db connections), and update state status to `COMPLETED`.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Added Domain Models:** Updated [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py) declaring `EvolutionSuggestion` and `EvolutionReport` structures, and added the `evolution_report` field to `ExcavationState`.
+2. **Evolution Planner Agent Usecase:** Created [evolution_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/evolution_planner.py) which scans code overview frameworks and structures to compile upgrade proposals and transitions status to `COMPLETED`.
+3. **Supervisor Integration:** Updated [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py) to automatically trigger `EvolutionPlannerAgent` immediately following a successful Stage 6 restoration run in `approve_and_restore`.
+4. **FastAPI & DI Integration:** Updated [web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/web.py) injecting `EvolutionPlannerAgent` singletons into `SupervisorWorkflow` dependency injectors and fixed the missing `SupervisorWorkflow` import.
+5. **Validation Test Suites:**
+   * Created [test_evolution_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_evolution_planner.py) verifying heuristic scanning rules and status flows.
+   * Updated [test_supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_supervisor.py) and [test_web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_web.py) (refactoring all global variables starting with `test_` to prevent pytest collection errors, fixing timezone offset mismatches, and mocking the evolution planner).
+6. **Architecture blueprints:** Updated [architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) detailing Stage 7 data flows, sequence calls, layouts, and API endpoint details.
+
+### Key Decisions & Rationale
+* **Decision:** Sequenced Evolution Planning to trigger automatically upon successful Restoration completion.
+  * *Rationale:* Creates a seamless, single-entrypoint user experience: once the client approves the Restoration Plan, ReForge executes codebase repairs and immediately formulates evolution guidelines in a single step, resulting in a clean transition to `COMPLETED`.
+* **Decision:** Extracted framework-specific upgrade suggestions (such as asynchronous database connection layers) dynamically based on `SoftwareOverview.frameworks`.
+  * *Rationale:* tailors evolution planning to the specific technology stack of the legacy repository, rather than issuing generic, non-applicable advice.
+
+
 
 
 

@@ -13,6 +13,7 @@ from reforge.usecases.heritage import HeritageEvaluator
 from reforge.usecases.explorer import ExplorerAgent
 from reforge.usecases.architect import ArchitectAgent
 from reforge.adapters.code_analyzer import LocalCodeAnalyzer
+from reforge.usecases.supervisor import SupervisorWorkflow
 
 # FastAPI initialization
 app = FastAPI(
@@ -24,6 +25,8 @@ app = FastAPI(
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
 from reforge.usecases.restorer import RestorerAgent
 from reforge.adapters.restoration_executor import LocalRestorationExecutor
+
+from reforge.usecases.evolution_planner import EvolutionPlannerAgent
 
 # Global instances (blackboard adapters & drivers)
 # Default to standard project storage folder
@@ -42,6 +45,7 @@ explorer_agent = ExplorerAgent(cloner=git_cloner, inspector=workspace_inspector)
 architect_agent = ArchitectAgent(analyzer=code_analyzer)
 restoration_planner = RestorationPlannerAgent()
 restorer_agent = RestorerAgent(executor=restoration_executor)
+evolution_planner = EvolutionPlannerAgent()
 
 # Supervisor
 supervisor_workflow = SupervisorWorkflow(
@@ -51,8 +55,10 @@ supervisor_workflow = SupervisorWorkflow(
     explorer_agent=explorer_agent,
     architect_agent=architect_agent,
     restoration_planner=restoration_planner,
-    restorer_agent=restorer_agent
+    restorer_agent=restorer_agent,
+    evolution_planner=evolution_planner
 )
+
 
 
 

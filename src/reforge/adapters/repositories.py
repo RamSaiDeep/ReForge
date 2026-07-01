@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from typing import Dict, List, Optional
@@ -14,18 +15,19 @@ class InMemoryProjectRepository(ProjectRepository):
         state = self._projects.get(project_id)
         if state:
             # Return a copy to mimic database isolation
-            return ExcavationState.model_validate(state.model_dump())
+            return copy.deepcopy(state)
         return None
 
     async def save(self, state: ExcavationState) -> None:
         # Save a copy to mimic database isolation
-        self._projects[state.project_id] = ExcavationState.model_validate(state.model_dump())
+        self._projects[state.project_id] = copy.deepcopy(state)
 
     async def list_projects(self) -> List[ExcavationState]:
         return [
-            ExcavationState.model_validate(state.model_dump()) 
+            copy.deepcopy(state) 
             for state in self._projects.values()
         ]
+
 
 
 class JSONFileProjectRepository(ProjectRepository):

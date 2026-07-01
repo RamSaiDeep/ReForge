@@ -15,8 +15,8 @@ def mock_repository() -> InMemoryProjectRepository:
 from reforge.usecases.explorer import ExplorerAgent
 from reforge.usecases.architect import ArchitectAgent
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
-
 from reforge.usecases.restorer import RestorerAgent
+from reforge.usecases.evolution_planner import EvolutionPlannerAgent
 
 @pytest.fixture
 def mock_scout_agent() -> AsyncMock:
@@ -61,6 +61,13 @@ def mock_restorer_agent() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_evolution_planner() -> AsyncMock:
+    agent = AsyncMock(spec=EvolutionPlannerAgent)
+    agent.name = "Evolution Planner"
+    return agent
+
+
+@pytest.fixture
 def supervisor(
     mock_repository,
     mock_scout_agent,
@@ -68,7 +75,8 @@ def supervisor(
     mock_explorer_agent,
     mock_architect_agent,
     mock_restoration_planner,
-    mock_restorer_agent
+    mock_restorer_agent,
+    mock_evolution_planner
 ) -> SupervisorWorkflow:
     return SupervisorWorkflow(
         repository=mock_repository,
@@ -77,7 +85,8 @@ def supervisor(
         explorer_agent=mock_explorer_agent,
         architect_agent=mock_architect_agent,
         restoration_planner=mock_restoration_planner,
-        restorer_agent=mock_restorer_agent
+        restorer_agent=mock_restorer_agent,
+        evolution_planner=mock_evolution_planner
     )
 
 
@@ -297,7 +306,7 @@ async def test_execute_excavation_full_pipeline(
 
 
 @pytest.mark.asyncio
-async def test_approve_and_restore_success(supervisor, mock_repository, mock_restorer_agent):
+async def test_approve_and_restore_success(supervisor, mock_repository, mock_restorer_agent, mock_evolution_planner):
     # Setup project in awaiting approval
     state = ExcavationState(
         project_id="app-proj",
@@ -311,11 +320,17 @@ async def test_approve_and_restore_success(supervisor, mock_repository, mock_res
         return []
     mock_restorer_agent.run.side_effect = restorer_side
 
+    async def evolution_side(state):
+        state.status = ExcavationStatus.COMPLETED
+        return MagicMock()
+    mock_evolution_planner.run.side_effect = evolution_side
+
     # Execute
     updated_state = await supervisor.approve_and_restore("app-proj")
     
-    assert updated_state.status == ExcavationStatus.RESTORED
-    mock_restorer_agent.run.assert_called_once_with(state)
+    assert updated_state.status == ExcavationStatus.COMPLETED
+    mock_restorer_agent.run.assert_called_once()
+    mock_evolution_planner.run.assert_called_once()
 
 
 @pytest.mark.asyncio

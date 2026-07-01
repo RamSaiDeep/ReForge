@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from reforge.adapters.github_provider import GitHubProvider
 
 def test_github_provider_url_parsing():
@@ -25,7 +25,7 @@ async def test_github_provider_fetch_profile_success(mock_get):
     provider = GitHubProvider(api_token="dummy-token")
 
     # Setup mock responses for the three serial HTTP requests
-    mock_repo_res = AsyncMock()
+    mock_repo_res = MagicMock()
     mock_repo_res.status_code = 200
     mock_repo_res.json.return_value = {
         "name": "my-archaeology-project",
@@ -39,15 +39,15 @@ async def test_github_provider_fetch_profile_success(mock_get):
         "pushed_at": "2023-06-30T18:00:00Z"
     }
 
-    mock_lang_res = AsyncMock()
+    mock_lang_res = MagicMock()
     mock_lang_res.status_code = 200
     mock_lang_res.json.return_value = {"Go": 8000, "C": 2000}
 
-    mock_readme_res = AsyncMock()
+    mock_readme_res = MagicMock()
     mock_readme_res.status_code = 200
     mock_readme_res.text = "# My Project\nArchaeology text."
 
-    mock_contrib_res = AsyncMock()
+    mock_contrib_res = MagicMock()
     mock_contrib_res.status_code = 200
     mock_contrib_res.headers = {"Link": '<https://api.github.com/...page=12>; rel="last"'}
     mock_contrib_res.json.return_value = []
@@ -80,7 +80,7 @@ async def test_github_provider_fetch_profile_success(mock_get):
 async def test_github_provider_fetch_profile_not_found(mock_get):
     provider = GitHubProvider()
 
-    mock_res = AsyncMock()
+    mock_res = MagicMock()
     mock_res.status_code = 404
     mock_get.return_value = mock_res
 

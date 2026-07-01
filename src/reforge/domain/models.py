@@ -166,6 +166,23 @@ class RestorationPlan(BaseModel):
     explanation: str = Field(..., description="Explainable strategy summary of the restoration process")
 
 
+class EvolutionSuggestion(BaseModel):
+    """An individual suggestion for evolving or improving a legacy software project."""
+    suggestion_type: str = Field(..., description="E.g., framework_upgrade, performance_improvement, security_improvement, new_capability")
+    title: str = Field(..., description="Short title of the recommended evolution")
+    description: str = Field(..., description="Detailed explanation of what to improve")
+    benefit: str = Field(..., description="Explainable benefit of applying this evolution")
+    difficulty: str = Field(..., description="E.g., EASY, MEDIUM, HARD")
+
+
+class EvolutionReport(BaseModel):
+    """Stage 7 — Evolution Report suggesting future optimizations and features."""
+    suggestions: List[EvolutionSuggestion] = Field(
+        default_factory=list, description="List of proposed evolution suggestions"
+    )
+    explanation: str = Field(..., description="Explainable summary of the project evolution plan")
+
+
 class ExcavationState(BaseModel):
     """The complete, mutable blackboard state representing a project's excavation status."""
     project_id: str = Field(..., description="Unique identifier for the excavation project")
@@ -193,10 +210,14 @@ class ExcavationState(BaseModel):
     restoration_plan: Optional[RestorationPlan] = Field(
         default=None, description="Restoration Plan strategy from Stage 5"
     )
+    evolution_report: Optional[EvolutionReport] = Field(
+        default=None, description="Evolution report suggestions from Stage 7"
+    )
     
     audit_logs: List[AgentLog] = Field(
         default_factory=list, description="Audit logs tracking agent actions"
     )
+
 
 
 

@@ -29,7 +29,7 @@ class RestorerAgent(ArchaeologyAgent):
         input_params = {
             "project_id": state.project_id,
             "local_path": state.local_path,
-            "steps_count": len(state.restoration_plan.steps)
+            "steps_count": str(len(state.restoration_plan.steps))
         }
 
         try:

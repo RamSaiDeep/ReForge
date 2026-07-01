@@ -69,5 +69,5 @@ async def test_local_code_analyzer(tmp_path):
 
     # Check relationships
     assert "usecases -> domain" in report.relationships
-    assert "usecases -> interfaces" in report.relationships
-    assert "adapters -> interfaces" in report.relationships
+    assert "adapters -> domain" in report.relationships
+

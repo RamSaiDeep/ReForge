@@ -24,8 +24,8 @@ class RestorationPlannerAgent(ArchaeologyAgent):
 
         input_params = {
             "project_id": state.project_id,
-            "build_system": state.software_overview.build_system,
-            "has_architecture": state.architecture_report is not None
+            "build_system": str(state.software_overview.build_system),
+            "has_architecture": str(state.architecture_report is not None)
         }
 
         try:

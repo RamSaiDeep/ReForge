@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pytest
 from reforge.domain.models import ExcavationState, ExcavationStatus, RepositoryProfile
 from reforge.usecases.heritage import HeritageEvaluator
@@ -15,8 +15,8 @@ def base_state() -> ExcavationState:
 @pytest.mark.asyncio
 async def test_heritage_evaluator_worthy_project(base_state):
     # Set up a historic, classic, abandoned project
-    created_at = datetime.utcnow() - timedelta(days=12 * 365)  # 12 years old
-    last_commit = datetime.utcnow() - timedelta(days=4 * 365)   # 4 years old (abandoned)
+    created_at = datetime.now(timezone.utc) - timedelta(days=12 * 365)  # 12 years old
+    last_commit = datetime.now(timezone.utc) - timedelta(days=4 * 365)   # 4 years old (abandoned)
 
     profile = RepositoryProfile(
         url="https://github.com/example/heritage-project",
@@ -63,8 +63,8 @@ async def test_heritage_evaluator_worthy_project(base_state):
 @pytest.mark.asyncio
 async def test_heritage_evaluator_unworthy_project(base_state):
     # Set up a new, low-value, active repository
-    created_at = datetime.utcnow() - timedelta(days=20)  # 20 days old
-    last_commit = datetime.utcnow() - timedelta(days=2)   # 2 days old (active)
+    created_at = datetime.now(timezone.utc) - timedelta(days=20)  # 20 days old
+    last_commit = datetime.now(timezone.utc) - timedelta(days=2)   # 2 days old (active)
 
     profile = RepositoryProfile(
         url="https://github.com/example/heritage-project",

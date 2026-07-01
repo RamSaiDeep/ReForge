@@ -8,6 +8,7 @@ from reforge.usecases.architect import ArchitectAgent
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
 
 from reforge.usecases.restorer import RestorerAgent
+from reforge.usecases.evolution_planner import EvolutionPlannerAgent
 
 class SupervisorWorkflow:
     """The Supervisor coordinates all specialized agents and controls the excavation workflow state transitions.
@@ -23,7 +24,8 @@ class SupervisorWorkflow:
         explorer_agent: ExplorerAgent,
         architect_agent: ArchitectAgent,
         restoration_planner: RestorationPlannerAgent,
-        restorer_agent: RestorerAgent
+        restorer_agent: RestorerAgent,
+        evolution_planner: EvolutionPlannerAgent
     ) -> None:
         self.repository = repository
         self.scout_agent = scout_agent
@@ -32,6 +34,7 @@ class SupervisorWorkflow:
         self.architect_agent = architect_agent
         self.restoration_planner = restoration_planner
         self.restorer_agent = restorer_agent
+        self.evolution_planner = evolution_planner
 
     async def create_project(self, project_id: str, repository_url: str) -> ExcavationState:
         """Initialize a new excavation project and save its initial state."""
@@ -126,7 +129,7 @@ class SupervisorWorkflow:
         return state
 
     async def approve_and_restore(self, project_id: str) -> ExcavationState:
-        """Approve the Restoration Plan and run Stage 6 (Restoration) to apply modifications."""
+        """Approve the Restoration Plan, run Stage 6 (Restoration) and run Stage 7 (Evolution Planning) to complete pipeline."""
         state = await self.repository.get_by_id(project_id)
         if not state:
             raise ValueError(f"Project with ID '{project_id}' does not exist.")
@@ -141,9 +144,18 @@ class SupervisorWorkflow:
         except Exception:
             await self.repository.save(state)
             return state
+
+        # Stage 7: Evolution Planning (runs automatically once restored successfully)
+        if state.status == ExcavationStatus.RESTORED:
+            try:
+                await self.evolution_planner.run(state)
+            except Exception:
+                await self.repository.save(state)
+                return state
             
         await self.repository.save(state)
         return state
+
 
 
 

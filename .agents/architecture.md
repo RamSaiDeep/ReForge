@@ -199,6 +199,42 @@ flowchart TD
     GenReport --> StateOut[(ExcavationState: EVALUATED or STOPPED)]
 ```
 
+### Supervisor Orchestration Sequence Flow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Supervisor as SupervisorWorkflow
+    participant DB as ProjectRepository
+    participant Scout as ScoutAgent
+    participant Heritage as HeritageEvaluator
+
+    Client->>Supervisor: create_project(project_id, repo_url)
+    Supervisor->>DB: save(state: PENDING)
+    DB-->>Supervisor: Confirm Saved
+    Supervisor-->>Client: Return initial state
+
+    Client->>Supervisor: execute_excavation(project_id)
+    Supervisor->>DB: get_by_id(project_id)
+    DB-->>Supervisor: Return PENDING state
+    
+    Note over Supervisor,Scout: Stage 1: Discovery
+    Supervisor->>Scout: run(state)
+    Scout->>Scout: Fetch and parse metadata
+    Scout->>Scout: Append success/fail AgentLog
+    Scout-->>Supervisor: Return profile (state: DISCOVERED)
+    Supervisor->>DB: save(state)
+    
+    Note over Supervisor,Heritage: Stage 2: Heritage Evaluation
+    Supervisor->>Heritage: run(state)
+    Heritage->>Heritage: Run weighted 6-category scores
+    Heritage->>Heritage: Append success/fail AgentLog
+    Heritage-->>Supervisor: Return report (state: EVALUATED/STOPPED)
+    Supervisor->>DB: save(state)
+
+    Supervisor-->>Client: Return final ExcavationState
+```
+
 ---
 
 ## 6. Implemented Package Layout
@@ -212,10 +248,12 @@ The codebase implements Clean Architecture across these layers:
 ### Use Cases (Workflow Executors)
 * [scout.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/scout.py): Coordinates discovery pipelines, error transitions, and explainable audit logs.
 * [heritage.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/heritage.py): Houses the 6-dimension scoring engine, preserving logic constraints.
+* [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py): Coordinates the execution order of individual agents, manages state persistence across transitions, and applies validation checkpoints.
 
 ### Interface Adapters (Infrastructure Bridges)
 * [repositories.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/repositories.py): Outlines storage engines (In-Memory / JSON File).
 * [github_provider.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/github_provider.py): Interfaces remote HTTP endpoints, mapping platform data structures to clean domain contracts.
+
 
 ---
 

@@ -107,6 +107,26 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Implemented automated condition check rules for "worth_preserving" flag based on overall score >= 50 or high individual category thresholds (historical/educational value >= 70).
   * *Rationale:* Protects older/abandoned codebases with low modern community popularity but immense educational or historic significance from being automatically filtered out.
 
+---
+
+## [Phase 5] The Supervisor (Workflow Orchestrator) (2026-07-01)
+
+### Phase Status
+* **Goal:** Implement the Supervisor Workflow Engine to coordinate agent execution and manage persistent state transactions.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Implemented Supervisor Workflow:** Created [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py) which handles creating projects and driving execution sequentially through Stage 1 (Discovery) and Stage 2 (Heritage Evaluation).
+2. **Usecase Test Suites:** Created [test_supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_supervisor.py) checking successful project creation, worthy project execution flows, unworthy halts, user-forced overrides, and recovery on agent failures.
+3. **Orchestration Sequence Flow:** Updated [architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) adding a sequence flow diagram outlining message paths between the client, supervisor, persistence DB, and specialized agents.
+
+### Key Decisions & Rationale
+* **Decision:** Modeled state persistence boundaries inside the Supervisor using the unit-of-work principle (saving state explicitly after each agent runs).
+  * *Rationale:* Guarantees that if a stage halts or experiences a network error, the intermediate progress is saved. Future agents can pick up where the workflow crashed.
+* **Decision:** Enforced check limits on duplicate project creation directly inside the Supervisor usecase.
+  * *Rationale:* Decouples business logic constraints from database constraint drivers (e.g. Postgres unique key exceptions), preserving Clean Architecture.
+
+
 
 
 

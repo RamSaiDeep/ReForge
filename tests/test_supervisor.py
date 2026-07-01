@@ -17,6 +17,7 @@ from reforge.usecases.architect import ArchitectAgent
 from reforge.usecases.restoration_planner import RestorationPlannerAgent
 from reforge.usecases.restorer import RestorerAgent
 from reforge.usecases.evolution_planner import EvolutionPlannerAgent
+from reforge.usecases.validation_agent import ValidationAgent
 
 @pytest.fixture
 def mock_scout_agent() -> AsyncMock:
@@ -68,6 +69,13 @@ def mock_evolution_planner() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_validation_agent() -> AsyncMock:
+    agent = AsyncMock(spec=ValidationAgent)
+    agent.name = "Validation Agent"
+    return agent
+
+
+@pytest.fixture
 def supervisor(
     mock_repository,
     mock_scout_agent,
@@ -76,7 +84,8 @@ def supervisor(
     mock_architect_agent,
     mock_restoration_planner,
     mock_restorer_agent,
-    mock_evolution_planner
+    mock_evolution_planner,
+    mock_validation_agent
 ) -> SupervisorWorkflow:
     return SupervisorWorkflow(
         repository=mock_repository,
@@ -86,7 +95,8 @@ def supervisor(
         architect_agent=mock_architect_agent,
         restoration_planner=mock_restoration_planner,
         restorer_agent=mock_restorer_agent,
-        evolution_planner=mock_evolution_planner
+        evolution_planner=mock_evolution_planner,
+        validation_agent=mock_validation_agent
     )
 
 
@@ -306,7 +316,7 @@ async def test_execute_excavation_full_pipeline(
 
 
 @pytest.mark.asyncio
-async def test_approve_and_restore_success(supervisor, mock_repository, mock_restorer_agent, mock_evolution_planner):
+async def test_approve_and_restore_success(supervisor, mock_repository, mock_restorer_agent, mock_validation_agent, mock_evolution_planner):
     # Setup project in awaiting approval
     state = ExcavationState(
         project_id="app-proj",
@@ -320,6 +330,11 @@ async def test_approve_and_restore_success(supervisor, mock_repository, mock_res
         return []
     mock_restorer_agent.run.side_effect = restorer_side
 
+    async def validation_side(state):
+        state.status = ExcavationStatus.VALIDATED
+        return True
+    mock_validation_agent.run.side_effect = validation_side
+
     async def evolution_side(state):
         state.status = ExcavationStatus.COMPLETED
         return MagicMock()
@@ -330,6 +345,7 @@ async def test_approve_and_restore_success(supervisor, mock_repository, mock_res
     
     assert updated_state.status == ExcavationStatus.COMPLETED
     mock_restorer_agent.run.assert_called_once()
+    mock_validation_agent.run.assert_called_once()
     mock_evolution_planner.run.assert_called_once()
 
 

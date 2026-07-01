@@ -9,6 +9,7 @@ from reforge.usecases.restoration_planner import RestorationPlannerAgent
 
 from reforge.usecases.restorer import RestorerAgent
 from reforge.usecases.evolution_planner import EvolutionPlannerAgent
+from reforge.usecases.validation_agent import ValidationAgent
 
 class SupervisorWorkflow:
     """The Supervisor coordinates all specialized agents and controls the excavation workflow state transitions.
@@ -25,7 +26,8 @@ class SupervisorWorkflow:
         architect_agent: ArchitectAgent,
         restoration_planner: RestorationPlannerAgent,
         restorer_agent: RestorerAgent,
-        evolution_planner: EvolutionPlannerAgent
+        evolution_planner: EvolutionPlannerAgent,
+        validation_agent: ValidationAgent
     ) -> None:
         self.repository = repository
         self.scout_agent = scout_agent
@@ -35,6 +37,7 @@ class SupervisorWorkflow:
         self.restoration_planner = restoration_planner
         self.restorer_agent = restorer_agent
         self.evolution_planner = evolution_planner
+        self.validation_agent = validation_agent
 
     async def create_project(self, project_id: str, repository_url: str) -> ExcavationState:
         """Initialize a new excavation project and save its initial state."""
@@ -129,7 +132,7 @@ class SupervisorWorkflow:
         return state
 
     async def approve_and_restore(self, project_id: str) -> ExcavationState:
-        """Approve the Restoration Plan, run Stage 6 (Restoration) and run Stage 7 (Evolution Planning) to complete pipeline."""
+        """Approve the Restoration Plan, run Stage 6 (Restoration), Validate the codebase, and run Stage 7 (Evolution Planning) to complete pipeline."""
         state = await self.repository.get_by_id(project_id)
         if not state:
             raise ValueError(f"Project with ID '{project_id}' does not exist.")
@@ -145,8 +148,16 @@ class SupervisorWorkflow:
             await self.repository.save(state)
             return state
 
-        # Stage 7: Evolution Planning (runs automatically once restored successfully)
+        # Stage 8: Validation (runs automatically once restored successfully)
         if state.status == ExcavationStatus.RESTORED:
+            try:
+                await self.validation_agent.run(state)
+            except Exception:
+                await self.repository.save(state)
+                return state
+
+        # Stage 7: Evolution Planning (runs automatically once validated successfully)
+        if state.status == ExcavationStatus.VALIDATED:
             try:
                 await self.evolution_planner.run(state)
             except Exception:
@@ -155,6 +166,7 @@ class SupervisorWorkflow:
             
         await self.repository.save(state)
         return state
+
 
 
 

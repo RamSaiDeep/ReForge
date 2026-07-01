@@ -285,10 +285,20 @@ flowchart TD
     RestorerAgent -->|Appends Log & Execution log| StateOut[(ExcavationState: RESTORED)]
 ```
 
+### Stage 8: Code Validation (Validation Agent) Data Flow
+```mermaid
+flowchart TD
+    StateIn[(ExcavationState: RESTORED)] --> ValidationAgent[ValidationAgent]
+    ValidationAgent -->|1. Call CodeValidator.validate| CodeValidator[CodeValidator / py_compile compiler]
+    CodeValidator -->|Compile source files| SyntaxChecks[Iterate Python AST / syntax validations]
+    SyntaxChecks -->|Syntax clean| ValidationAgent
+    ValidationAgent -->|Appends Log & Validation outcome| StateOut[(ExcavationState: VALIDATED)]
+```
+
 ### Stage 7: Evolution Planning (Evolution Planner Agent) Data Flow
 ```mermaid
 flowchart TD
-    StateIn[(ExcavationState: RESTORED)] --> EvolutionPlannerAgent[EvolutionPlannerAgent]
+    StateIn[(ExcavationState: VALIDATED)] --> EvolutionPlannerAgent[EvolutionPlannerAgent]
     EvolutionPlannerAgent -->|1. Scan SoftwareOverview & ArchitectureReport| Scanner[Heuristic scanner rules]
     Scanner -->|Rule 1: Check lock files| Suggest1[performance_improvement: Modern Lock Files]
     Scanner -->|Rule 2: Check code linters| Suggest2[security_improvement: Code Quality Guards]
@@ -311,6 +321,7 @@ sequenceDiagram
     participant Architect as ArchitectAgent
     participant Restoration as RestorationPlannerAgent
     participant Restorer as RestorerAgent
+    participant Validation as ValidationAgent
     participant Evolution as EvolutionPlannerAgent
 
     Client->>Supervisor: create_project(project_id, repo_url)
@@ -368,6 +379,13 @@ sequenceDiagram
     Restorer-->>Supervisor: Return execution logs (state: RESTORED)
     Supervisor->>DB: save(state)
 
+    Note over Supervisor,Validation: Stage 8: Code Validation (Auto Run)
+    Supervisor->>Validation: run(state)
+    Validation->>Validation: Run python syntax & compilation checks
+    Validation->>Validation: Append success/fail AgentLog
+    Validation-->>Supervisor: Return validation results (state: VALIDATED)
+    Supervisor->>DB: save(state)
+
     Note over Supervisor,Evolution: Stage 7: Evolution Planning (Auto Run)
     Supervisor->>Evolution: run(state)
     Evolution->>Evolution: Analyze structures & frameworks
@@ -385,7 +403,7 @@ sequenceDiagram
 The codebase implements Clean Architecture across these layers:
 
 ### Core Domain
-* [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract boundaries: `ProjectRepository`, `GitProvider`, `GitCloner`, `WorkspaceInspector`, `CodeAnalyzer`, `RestorationExecutor`, and `ArchaeologyAgent`.
+* [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py): Declares abstract boundaries: `ProjectRepository`, `GitProvider`, `GitCloner`, `WorkspaceInspector`, `CodeAnalyzer`, `RestorationExecutor`, `CodeValidator`, and `ArchaeologyAgent`.
 * [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py): Establishes strongly-typed Pydantic validation entities (such as `RepositoryProfile`, `HeritageReport`, `SoftwareOverview`, `ArchitectureReport`, `RestorationIssue`, `RestorationPlan`, `EvolutionSuggestion`, `EvolutionReport`, `AgentLog`, `ExcavationState`).
 
 ### Use Cases (Workflow Executors)
@@ -395,6 +413,7 @@ The codebase implements Clean Architecture across these layers:
 * [architect.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/architect.py): Manages Stage 4 source code AST/regex dependency extraction.
 * [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py): Manages Stage 5 restoration issue detection and effort hours compile.
 * [restorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restorer.py): Manages Stage 6 migration command simulation and configuration repair.
+* [validation_agent.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/validation_agent.py): Manages Stage 8 automated source code syntax validation checks.
 * [evolution_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/evolution_planner.py): Manages Stage 7 future upgrade recommendations.
 * [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py): Coordinates the execution order of individual agents, manages state persistence across transitions, and applies validation checkpoints.
 
@@ -405,6 +424,7 @@ The codebase implements Clean Architecture across these layers:
 * [workspace_inspector.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/workspace_inspector.py): Crawls and inspects local directories using OS file system APIs.
 * [code_analyzer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/code_analyzer.py): Scans files for programming language imports and constructs dependency maps.
 * [restoration_executor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/restoration_executor.py): Executes commands or applies file configurations to repair workspace builds.
+* [code_validator.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/code_validator.py): Safely compiles source code and checks for syntax errors.
 
 ### Frameworks & Drivers
 * [web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/web.py): Instantiates the FastAPI application, coordinates singleton dependency injection (wiring repositories, provider adapters, and agent engines), and implements REST controller routing handlers.

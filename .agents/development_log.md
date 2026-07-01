@@ -274,6 +274,33 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Extracted framework-specific upgrade suggestions (such as asynchronous database connection layers) dynamically based on `SoftwareOverview.frameworks`.
   * *Rationale:* tailors evolution planning to the specific technology stack of the legacy repository, rather than issuing generic, non-applicable advice.
 
+---
+
+## [Phase 12] Stage 8 — Code Validation (Validation Agent) (2026-07-02)
+
+### Phase Status
+* **Goal:** Implement the Stage 8 Validation Agent to run between Restoration and Evolution Planning, performing syntax compilation/lint checks to verify compile integrity, and updating project status to `VALIDATED`.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Added Domain Interfaces:** Updated [interfaces.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/interfaces.py) adding the `CodeValidator` boundary.
+2. **Code Validator Adapter:** Created [code_validator.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/code_validator.py) which scans the restored workspace directory and compiles Python files using `py_compile.compile` to check for syntax correctness.
+3. **Validation Agent Usecase:** Created [validation_agent.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/validation_agent.py) which updates status to `VALIDATING` and `VALIDATED` (or `FAILED`), appending execution metrics and success/failure `AgentLog` entries to the audit trail.
+4. **Supervisor & REST Routing:**
+   * Updated [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py) to inject `ValidationAgent` and sequence it immediately following `RestorerAgent` inside `approve_and_restore`.
+   * Updated [web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/web.py) to instantiate `LocalCodeValidator` and `ValidationAgent`, injecting them into the workflow singleton setup.
+5. **Validation Test Suites:**
+   * Created [test_validation_agent.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_validation_agent.py) verifying compilation successes, syntax compile errors, and agent status transitions.
+   * Updated [test_supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_supervisor.py) and [test_web.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_web.py) mocking `ValidationAgent` execution and verifying successful pipeline flow.
+6. **Architecture blueprints:** Updated [architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) detailing Stage 8 flowcharts, sequence diagrams, package lists, and layout schemas.
+
+### Key Decisions & Rationale
+* **Decision:** Weaved the Validation Agent step directly between Restoration and Evolution Planning.
+  * *Rationale:* ensures code correctness before any future evolutions or suggestions are generated. If a restored codebase contains syntax or compilation errors, the pipeline halts immediately with `FAILED` status, preventing bad recommendations.
+* **Decision:** Used native `py_compile` package checks in `LocalCodeValidator`.
+  * *Rationale:* provides a fast, lightweight, and sandboxed syntax validator that does not require installing external complex linting systems or running full runtime executions.
+
+
 
 
 

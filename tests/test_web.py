@@ -15,6 +15,7 @@ from reforge.infrastructure.web import app, get_repository, get_supervisor
 
 from reforge.usecases.restorer import RestorerAgent
 from reforge.usecases.evolution_planner import EvolutionPlannerAgent
+from reforge.usecases.validation_agent import ValidationAgent
 
 # Setup mocks (do not start name with 'test_' to avoid pytest collection warnings/errors)
 mock_repository = InMemoryProjectRepository()
@@ -25,6 +26,7 @@ mock_architect = AsyncMock(spec=ArchitectAgent)
 mock_restoration_planner = AsyncMock(spec=RestorationPlannerAgent)
 mock_restorer = AsyncMock(spec=RestorerAgent)
 mock_evolution_planner = AsyncMock(spec=EvolutionPlannerAgent)
+mock_validation_agent = AsyncMock(spec=ValidationAgent)
 
 mock_supervisor = SupervisorWorkflow(
     repository=mock_repository,
@@ -34,7 +36,8 @@ mock_supervisor = SupervisorWorkflow(
     architect_agent=mock_architect,
     restoration_planner=mock_restoration_planner,
     restorer_agent=mock_restorer,
-    evolution_planner=mock_evolution_planner
+    evolution_planner=mock_evolution_planner,
+    validation_agent=mock_validation_agent
 )
 
 app.dependency_overrides[get_repository] = lambda: mock_repository

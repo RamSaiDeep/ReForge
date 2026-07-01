@@ -28,6 +28,9 @@ from reforge.adapters.restoration_executor import LocalRestorationExecutor
 
 from reforge.usecases.evolution_planner import EvolutionPlannerAgent
 
+from reforge.adapters.code_validator import LocalCodeValidator
+from reforge.usecases.validation_agent import ValidationAgent
+
 # Global instances (blackboard adapters & drivers)
 # Default to standard project storage folder
 STORAGE_DIR = os.getenv("REFORGE_STORAGE_DIR", ".reforge_data")
@@ -37,6 +40,7 @@ git_cloner = LocalGitCloner()
 workspace_inspector = LocalWorkspaceInspector()
 code_analyzer = LocalCodeAnalyzer()
 restoration_executor = LocalRestorationExecutor()
+code_validator = LocalCodeValidator()
 
 # Agents
 scout_agent = ScoutAgent(git_provider=git_provider)
@@ -46,6 +50,7 @@ architect_agent = ArchitectAgent(analyzer=code_analyzer)
 restoration_planner = RestorationPlannerAgent()
 restorer_agent = RestorerAgent(executor=restoration_executor)
 evolution_planner = EvolutionPlannerAgent()
+validation_agent = ValidationAgent(validator=code_validator)
 
 # Supervisor
 supervisor_workflow = SupervisorWorkflow(
@@ -56,7 +61,8 @@ supervisor_workflow = SupervisorWorkflow(
     architect_agent=architect_agent,
     restoration_planner=restoration_planner,
     restorer_agent=restorer_agent,
-    evolution_planner=evolution_planner
+    evolution_planner=evolution_planner,
+    validation_agent=validation_agent
 )
 
 

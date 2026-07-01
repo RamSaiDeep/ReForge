@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.reforge_data/
+.reforge_workspaces/
+
+# Reports & Outputs
+reports/

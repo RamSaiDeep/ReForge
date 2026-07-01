@@ -100,12 +100,22 @@ All modifications are logged.
 
 ---
 
-## Stage 7 — Evolution Planning
+## Stage 7 — Code Validation
+
+**Goal:** Run compilation or syntax checks to verify that restoration changes did not introduce bugs.
+
+Checks:
+* Python source syntax compilation correctness.
+
+**Output:** Validation log and results status.
+
+---
+
+## Stage 8 — Evolution Planning
 
 **Goal:** Suggest future improvements.
 
 Examples:
-
 * Framework upgrades
 * Performance improvements
 * Security improvements
@@ -124,5 +134,6 @@ Every analysis produces:
 * Preservation Profile
 * Architecture Report
 * Restoration Plan
+* Validation Report
 * Evolution Report
 * Complete Audit Log

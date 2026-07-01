@@ -285,7 +285,7 @@ flowchart TD
     RestorerAgent -->|Appends Log & Execution log| StateOut[(ExcavationState: RESTORED)]
 ```
 
-### Stage 8: Code Validation (Validation Agent) Data Flow
+### Stage 7: Code Validation (Validation Agent) Data Flow
 ```mermaid
 flowchart TD
     StateIn[(ExcavationState: RESTORED)] --> ValidationAgent[ValidationAgent]
@@ -295,7 +295,7 @@ flowchart TD
     ValidationAgent -->|Appends Log & Validation outcome| StateOut[(ExcavationState: VALIDATED)]
 ```
 
-### Stage 7: Evolution Planning (Evolution Planner Agent) Data Flow
+### Stage 8: Evolution Planning (Evolution Planner Agent) Data Flow
 ```mermaid
 flowchart TD
     StateIn[(ExcavationState: VALIDATED)] --> EvolutionPlannerAgent[EvolutionPlannerAgent]
@@ -379,14 +379,14 @@ sequenceDiagram
     Restorer-->>Supervisor: Return execution logs (state: RESTORED)
     Supervisor->>DB: save(state)
 
-    Note over Supervisor,Validation: Stage 8: Code Validation (Auto Run)
+    Note over Supervisor,Validation: Stage 7: Code Validation (Auto Run)
     Supervisor->>Validation: run(state)
     Validation->>Validation: Run python syntax & compilation checks
     Validation->>Validation: Append success/fail AgentLog
     Validation-->>Supervisor: Return validation results (state: VALIDATED)
     Supervisor->>DB: save(state)
 
-    Note over Supervisor,Evolution: Stage 7: Evolution Planning (Auto Run)
+    Note over Supervisor,Evolution: Stage 8: Evolution Planning (Auto Run)
     Supervisor->>Evolution: run(state)
     Evolution->>Evolution: Analyze structures & frameworks
     Evolution->>Evolution: Recommend lock files, linters & upgrades
@@ -413,8 +413,8 @@ The codebase implements Clean Architecture across these layers:
 * [architect.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/architect.py): Manages Stage 4 source code AST/regex dependency extraction.
 * [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py): Manages Stage 5 restoration issue detection and effort hours compile.
 * [restorer.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restorer.py): Manages Stage 6 migration command simulation and configuration repair.
-* [validation_agent.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/validation_agent.py): Manages Stage 8 automated source code syntax validation checks.
-* [evolution_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/evolution_planner.py): Manages Stage 7 future upgrade recommendations.
+* [validation_agent.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/validation_agent.py): Manages Stage 7 automated source code syntax validation checks.
+* [evolution_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/evolution_planner.py): Manages Stage 8 future upgrade recommendations.
 * [supervisor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/supervisor.py): Coordinates the execution order of individual agents, manages state persistence across transitions, and applies validation checkpoints.
 
 ### Interface Adapters (Infrastructure Bridges)

@@ -1,0 +1,348 @@
+{
+  "modules": [
+    "src/main.py",
+    "src/reforge/__init__.py",
+    "src/reforge/adapters/code_analyzer.py",
+    "src/reforge/adapters/code_validator.py",
+    "src/reforge/adapters/github_provider.py",
+    "src/reforge/adapters/git_cloner.py",
+    "src/reforge/adapters/repositories.py",
+    "src/reforge/adapters/restoration_executor.py",
+    "src/reforge/adapters/workspace_inspector.py",
+    "src/reforge/adapters/__init__.py",
+    "src/reforge/domain/interfaces.py",
+    "src/reforge/domain/models.py",
+    "src/reforge/domain/__init__.py",
+    "src/reforge/infrastructure/web.py",
+    "src/reforge/infrastructure/__init__.py",
+    "src/reforge/usecases/architect.py",
+    "src/reforge/usecases/evolution_planner.py",
+    "src/reforge/usecases/explorer.py",
+    "src/reforge/usecases/heritage.py",
+    "src/reforge/usecases/restoration_planner.py",
+    "src/reforge/usecases/restorer.py",
+    "src/reforge/usecases/scout.py",
+    "src/reforge/usecases/supervisor.py",
+    "src/reforge/usecases/validation_agent.py",
+    "src/reforge/usecases/__init__.py",
+    "tests/test_architect.py",
+    "tests/test_code_analyzer.py",
+    "tests/test_domain_models.py",
+    "tests/test_evolution_planner.py",
+    "tests/test_explorer.py",
+    "tests/test_github_provider.py",
+    "tests/test_heritage.py",
+    "tests/test_repositories.py",
+    "tests/test_restoration_planner.py",
+    "tests/test_restorer.py",
+    "tests/test_scout.py",
+    "tests/test_supervisor.py",
+    "tests/test_validation_agent.py",
+    "tests/test_web.py",
+    "tests/test_workspace_inspector.py"
+  ],
+  "dependencies": {
+    "src/main.py": [],
+    "src/reforge/__init__.py": [],
+    "src/reforge/adapters/code_analyzer.py": [
+      "src/reforge/__init__.py",
+      "src/reforge/adapters/__init__.py",
+      "src/reforge/adapters/code_validator.py",
+      "src/reforge/adapters/git_cloner.py",
+      "src/reforge/adapters/github_provider.py",
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/adapters/restoration_executor.py",
+      "src/reforge/adapters/workspace_inspector.py",
+      "src/reforge/domain/__init__.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/infrastructure/__init__.py",
+      "src/reforge/infrastructure/web.py",
+      "src/reforge/usecases/__init__.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/supervisor.py",
+      "src/reforge/usecases/validation_agent.py",
+      "tests/test_explorer.py",
+      "tests/test_repositories.py",
+      "tests/test_restoration_planner.py",
+      "tests/test_restorer.py"
+    ],
+    "src/reforge/adapters/code_validator.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/interfaces.py",
+      "tests/test_repositories.py"
+    ],
+    "src/reforge/adapters/github_provider.py": [
+      "src/reforge/__init__.py",
+      "src/reforge/adapters/__init__.py",
+      "src/reforge/adapters/code_analyzer.py",
+      "src/reforge/adapters/code_validator.py",
+      "src/reforge/adapters/git_cloner.py",
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/adapters/restoration_executor.py",
+      "src/reforge/adapters/workspace_inspector.py",
+      "src/reforge/domain/__init__.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/infrastructure/__init__.py",
+      "src/reforge/infrastructure/web.py",
+      "src/reforge/usecases/__init__.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/supervisor.py",
+      "src/reforge/usecases/validation_agent.py",
+      "tests/test_explorer.py",
+      "tests/test_repositories.py",
+      "tests/test_restoration_planner.py",
+      "tests/test_restorer.py"
+    ],
+    "src/reforge/adapters/git_cloner.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/interfaces.py",
+      "tests/test_repositories.py"
+    ],
+    "src/reforge/adapters/repositories.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "tests/test_repositories.py"
+    ],
+    "src/reforge/adapters/restoration_executor.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "tests/test_repositories.py"
+    ],
+    "src/reforge/adapters/workspace_inspector.py": [
+      "src/reforge/__init__.py",
+      "src/reforge/adapters/__init__.py",
+      "src/reforge/adapters/code_analyzer.py",
+      "src/reforge/adapters/code_validator.py",
+      "src/reforge/adapters/git_cloner.py",
+      "src/reforge/adapters/github_provider.py",
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/adapters/restoration_executor.py",
+      "src/reforge/domain/__init__.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/infrastructure/__init__.py",
+      "src/reforge/infrastructure/web.py",
+      "src/reforge/usecases/__init__.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/supervisor.py",
+      "src/reforge/usecases/validation_agent.py",
+      "tests/test_explorer.py",
+      "tests/test_repositories.py",
+      "tests/test_restoration_planner.py",
+      "tests/test_restorer.py"
+    ],
+    "src/reforge/adapters/__init__.py": [],
+    "src/reforge/domain/interfaces.py": [
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/domain/models.py": [],
+    "src/reforge/domain/__init__.py": [],
+    "src/reforge/infrastructure/web.py": [
+      "src/reforge/adapters/code_analyzer.py",
+      "src/reforge/adapters/code_validator.py",
+      "src/reforge/adapters/git_cloner.py",
+      "src/reforge/adapters/github_provider.py",
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/adapters/restoration_executor.py",
+      "src/reforge/adapters/workspace_inspector.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/supervisor.py",
+      "src/reforge/usecases/validation_agent.py",
+      "tests/test_repositories.py"
+    ],
+    "src/reforge/infrastructure/__init__.py": [],
+    "src/reforge/usecases/architect.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/evolution_planner.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/explorer.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "tests/test_repositories.py"
+    ],
+    "src/reforge/usecases/heritage.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/restoration_planner.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/restorer.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/scout.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/supervisor.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/validation_agent.py"
+    ],
+    "src/reforge/usecases/validation_agent.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py"
+    ],
+    "src/reforge/usecases/__init__.py": [],
+    "tests/test_architect.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/architect.py"
+    ],
+    "tests/test_code_analyzer.py": [
+      "src/reforge/adapters/code_analyzer.py",
+      "src/reforge/adapters/repositories.py",
+      "tests/test_repositories.py"
+    ],
+    "tests/test_domain_models.py": [
+      "src/reforge/domain/models.py"
+    ],
+    "tests/test_evolution_planner.py": [
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/evolution_planner.py"
+    ],
+    "tests/test_explorer.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/explorer.py"
+    ],
+    "tests/test_github_provider.py": [
+      "src/reforge/adapters/github_provider.py"
+    ],
+    "tests/test_heritage.py": [
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/heritage.py"
+    ],
+    "tests/test_repositories.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/models.py"
+    ],
+    "tests/test_restoration_planner.py": [
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/restoration_planner.py"
+    ],
+    "tests/test_restorer.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/adapters/restoration_executor.py",
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/restorer.py",
+      "tests/test_repositories.py"
+    ],
+    "tests/test_scout.py": [
+      "src/reforge/domain/interfaces.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/scout.py"
+    ],
+    "tests/test_supervisor.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/supervisor.py",
+      "src/reforge/usecases/validation_agent.py"
+    ],
+    "tests/test_validation_agent.py": [
+      "src/reforge/adapters/code_validator.py",
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/usecases/validation_agent.py",
+      "tests/test_repositories.py"
+    ],
+    "tests/test_web.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/domain/models.py",
+      "src/reforge/infrastructure/web.py",
+      "src/reforge/usecases/architect.py",
+      "src/reforge/usecases/evolution_planner.py",
+      "src/reforge/usecases/explorer.py",
+      "src/reforge/usecases/heritage.py",
+      "src/reforge/usecases/restoration_planner.py",
+      "src/reforge/usecases/restorer.py",
+      "src/reforge/usecases/scout.py",
+      "src/reforge/usecases/supervisor.py",
+      "src/reforge/usecases/validation_agent.py"
+    ],
+    "tests/test_workspace_inspector.py": [
+      "src/reforge/adapters/repositories.py",
+      "src/reforge/adapters/workspace_inspector.py",
+      "tests/test_repositories.py"
+    ]
+  },
+  "components": [
+    "adapters",
+    "domain",
+    "infrastructure",
+    "reforge",
+    "src",
+    "tests",
+    "usecases"
+  ],
+  "relationships": [
+    "adapters -> domain",
+    "adapters -> infrastructure",
+    "adapters -> reforge",
+    "adapters -> tests",
+    "adapters -> usecases",
+    "infrastructure -> adapters",
+    "infrastructure -> domain",
+    "infrastructure -> tests",
+    "infrastructure -> usecases",
+    "tests -> adapters",
+    "tests -> domain",
+    "tests -> infrastructure",
+    "tests -> usecases",
+    "usecases -> adapters",
+    "usecases -> domain",
+    "usecases -> tests"
+  ],
+  "explanation": "Successfully reconstructed software architecture. Identified 40 source modules grouped across 7 component layers (adapters, domain, infrastructure, reforge, src, tests, usecases). Mapped 201 internal module import coupling connections. Discovered component dependency boundaries: adapters -> domain, adapters -> infrastructure, adapters -> reforge, adapters -> tests, adapters -> usecases, infrastructure -> adapters, infrastructure -> domain, infrastructure -> tests, infrastructure -> usecases, tests -> adapters, tests -> domain, tests -> infrastructure, tests -> usecases, usecases -> adapters, usecases -> domain, usecases -> tests."
+}

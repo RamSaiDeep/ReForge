@@ -1,0 +1,33 @@
+{
+  "repository_url": "https://github.com/pallets/click",
+  "overall_score": 70,
+  "profile": {
+    "historical_value": {
+      "score": 80,
+      "explanation": "Baseline historical value set to 50. Project is over 10 years old (12.2 years), indicating high historical lifespan (+30)."
+    },
+    "community_value": {
+      "score": 94,
+      "explanation": "Stars score: 100/100 (17554 stars). Forks score: 100/100 (1825 forks). Watchers score: 74/100 (182 watchers)."
+    },
+    "activity_sustainability": {
+      "score": 100,
+      "explanation": "Active development: Last commit was 0 days ago (within 3 months). Low immediate need for archaeological recovery."
+    },
+    "restoration_feasibility": {
+      "score": 40,
+      "explanation": "Baseline restoration feasibility set to 30. No common build configurations identified in readme. Permissive or open license 'BSD-3-Clause' detected (+10)."
+    },
+    "educational_value": {
+      "score": 40,
+      "explanation": "Baseline educational value set to 40."
+    },
+    "innovation_evolution_potential": {
+      "score": 60,
+      "explanation": "Baseline innovation potential set to 50. Uses a modern and highly-supported primary language 'Python' (+10)."
+    }
+  },
+  "worth_preserving": true,
+  "guiding_question_answer": "This software deserves another chapter because: It represents a significant technological milestone or has historical ecosystem influence. There remains strong community interest despite its inactive status.",
+  "explanation": "Heritage evaluation completed. Overall score: 70/100. Historical: 80, Educational: 40, Feasibility: 40. Worth preserving: True."
+}

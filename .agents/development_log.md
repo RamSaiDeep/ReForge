@@ -300,6 +300,31 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Used native `py_compile` package checks in `LocalCodeValidator`.
   * *Rationale:* provides a fast, lightweight, and sandboxed syntax validator that does not require installing external complex linting systems or running full runtime executions.
 
+---
+
+## [Phase 13] Production CLI & End-to-End Analysis (2026-07-02)
+
+### Phase Status
+* **Goal:** Create a production-ready CLI entrypoint (`scripts/excavate.py`) supporting both remote repository URLs (`--repo`) and local folders (`--local`), executing Stages 1 to 8, rendering terminal scorecards, prompting for validation approvals, and writing JSON and Markdown report artifacts.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Renumbered Stage Sequence:** Globally adjusted naming and documentation schemas. Renumbered the pipeline to a clean 1-8 sequence:
+   * Stage 6: Restoration
+   * Stage 7: Code Validation (Validation Agent)
+   * Stage 8: Evolution Planning (Evolution Agent)
+2. **Updated Blueprint Blueprints & Docs:** Modified [.agents/architecture.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/.agents/architecture.md) and [docs/analysis_pipline.md](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/docs/analysis_pipline.md) to reflect this reordered numbering sequence.
+3. **Implemented Production CLI:** Created [excavate.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/scripts/excavate.py) parsing command arguments, executing usecase supervisors, rendering scorecard consoles, and saving reports under `reports/`.
+4. **Local Execution Fallback Support:** Updated [github_provider.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/github_provider.py)'s `fetch_profile` to supply an automatic fallback repository profile if parsing local `file:///` URLs, enabling offline execution.
+5. **Testing Verification:** Confirmed that the full 49 tests suite passes successfully. Validated CLI execution against both local directories (`--local .`) and remote GitHub repositories (`--repo https://github.com/pallets/click`).
+
+### Key Decisions & Rationale
+* **Decision:** Supported both local paths and remote URLs inside the CLI.
+  * *Rationale:* Demonstrates ReForge's product promise directly: users can paste a live GitHub link or test a local codebase.
+* **Decision:** Implemented report output directories (`reports/<project_id>/`) writing JSON reports and an unified `summary.md`.
+  * *Rationale:* Persists structural excavation evidence that can be consumed by other programs, analyzed, or displayed in a UI dashboard later.
+
+
 
 
 

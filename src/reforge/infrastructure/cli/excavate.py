@@ -90,7 +90,20 @@ async def run_excavation_workflow(target: str, project_id: Optional[str], auto_a
 
     try:
         repo_url = target if is_remote else f"file:///{local_path.replace(os.sep, '/')}"
-        state = await supervisor.create_project(project_id, repo_url)
+        try:
+            state = await supervisor.create_project(project_id, repo_url)
+        except ValueError as err:
+            if "already exists" in str(err):
+                console.print(f"[yellow]Project '{project_id}' already exists. Overwriting existing project state...[/yellow]")
+                state = ExcavationState(
+                    project_id=project_id,
+                    repository_url=repo_url,
+                    status=ExcavationStatus.PENDING
+                )
+                await repository.save(state)
+            else:
+                raise err
+                
         if not is_remote:
             state.local_path = local_path
 

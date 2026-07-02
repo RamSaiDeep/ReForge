@@ -1,18 +1,4 @@
 {
-  "status": "PASSED",
-  "logs": [
-    {
-      "id": "ae30f322-7c75-4e98-ae5b-aadfe5249231",
-      "project_id": "click",
-      "agent_name": "Validation Agent",
-      "action_type": "VALIDATION_SUCCESS",
-      "timestamp": "2026-07-01 20:17:14.732314",
-      "input_parameters": {
-        "project_id": "click",
-        "local_path": "C:\\Users\\vrams\\OneDrive\\Desktop\\ReForge\\.reforge_workspaces\\click"
-      },
-      "output_result": "All files compiled successfully without syntax errors.",
-      "explanation": "Successfully validated restored codebase. Checked python file syntax and verified compile integrity."
-    }
-  ]
+  "status": "FAILED/UNRUN",
+  "logs": []
 }

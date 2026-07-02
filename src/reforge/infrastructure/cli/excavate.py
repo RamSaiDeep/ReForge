@@ -1,14 +1,13 @@
-import argparse
 import asyncio
 import json
 import os
 import shutil
-import sys
 import tempfile
-from typing import Dict, Any
-
-# Ensure reforge is in sys.path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from typing import Optional, Dict, Any
 
 from reforge.domain.models import ExcavationState, ExcavationStatus
 from reforge.adapters.repositories import InMemoryProjectRepository
@@ -30,60 +29,35 @@ from reforge.usecases.evolution_planner import EvolutionPlannerAgent
 from reforge.usecases.supervisor import SupervisorWorkflow
 
 def serialize_pydantic(model: Any) -> Dict[str, Any]:
-    """Safely serialize Pydantic model or return dict representation."""
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return {}
 
-def print_separator(char: str = "=", length: int = 50):
-    print(char * length)
-
-async def main_async():
-    parser = argparse.ArgumentParser(
-        description="ReForge Software Archaeology CLI: Excavate, restore, and evolve legacy repositories."
-    )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--repo", help="HTTPS URL of the remote GitHub repository to clone and excavate.")
-    group.add_argument("--local", help="Path to a local repository/directory to excavate.")
-    
-    parser.add_argument("--project-id", help="Customized project identifier. Defaults to the repository name.")
-    parser.add_argument(
-        "--auto-approve",
-        action="store_true",
-        help="Auto-approve the restoration plan and continue without interactive prompt."
-    )
-    
-    args = parser.parse_args()
+async def run_excavation_workflow(target: str, project_id: Optional[str], auto_approve: bool):
+    console = Console()
 
     # Determine project ID
-    if args.project_id:
-        project_id = args.project_id
-    else:
-        # Infer name from URL or local path
-        target = args.repo or args.local
+    if not project_id:
         project_id = target.rstrip("/").split("/")[-1].replace(".git", "")
-        if not project_id:
+        if not project_id or project_id in (".", ".."):
             project_id = "excavated-project"
 
-    print_separator()
-    print("ReForge Software Archaeology CLI")
-    print_separator()
-    
-    target_source = args.repo or args.local
-    print(f"Target Project ID: {project_id}")
-    print(f"Source:            {target_source}")
-    print_separator("-")
+    console.print(f"[bold cyan]Starting Excavation for project:[/bold cyan] [green]{project_id}[/green]")
+    console.print(f"[bold cyan]Source location:[/bold cyan]           {target}\n")
 
-    # Setup temporary directory for cloning if remote repository
+    # Detect repo vs local
+    is_remote = target.startswith(("http://", "https://", "git@", "github.com"))
     temp_dir = None
-    if args.repo:
+    if is_remote:
         temp_dir = tempfile.mkdtemp(prefix="reforge-")
         local_path = temp_dir
     else:
-        local_path = os.path.abspath(args.local)
+        local_path = os.path.abspath(target)
 
     # Initialize production singletons
-    repository = InMemoryProjectRepository()
+    from reforge.adapters.repositories import JSONFileProjectRepository
+    storage_dir = os.getenv("REFORGE_STORAGE_DIR", ".reforge_data")
+    repository = JSONFileProjectRepository(storage_dir=storage_dir)
     git_provider = GitHubProvider()
     git_cloner = LocalGitCloner()
     workspace_inspector = LocalWorkspaceInspector()
@@ -94,9 +68,6 @@ async def main_async():
     # Initialize agents
     scout_agent = ScoutAgent(git_provider=git_provider)
     heritage_evaluator = HeritageEvaluator()
-    # Explorer clones/copies. For --local, explorer can copy the folder to a staging workspace or inspect directly.
-    # Since ExplorerAgent expects to copy from a source repo URL, let's configure the URL appropriately:
-    # If args.local, the cloner will run copy locally. Our LocalGitCloner supports file:/// or local folder copying.
     explorer_agent = ExplorerAgent(cloner=git_cloner, inspector=workspace_inspector)
     architect_agent = ArchitectAgent(analyzer=code_analyzer)
     restoration_planner = RestorationPlannerAgent()
@@ -104,7 +75,7 @@ async def main_async():
     validation_agent = ValidationAgent(validator=code_validator)
     evolution_planner = EvolutionPlannerAgent()
 
-    # Initialize workflow supervisor
+    # Initialize supervisor
     supervisor = SupervisorWorkflow(
         repository=repository,
         scout_agent=scout_agent,
@@ -118,167 +89,123 @@ async def main_async():
     )
 
     try:
-        # Create excavation project
-        repo_url = args.repo or f"file:///{local_path.replace(os.sep, '/')}"
+        repo_url = target if is_remote else f"file:///{local_path.replace(os.sep, '/')}"
         state = await supervisor.create_project(project_id, repo_url)
-        # If --local is specified, we can bypass the cloner source and manually populate local_path beforehand
-        # to point to the user's directory directly
-        if args.local:
+        if not is_remote:
             state.local_path = local_path
 
-        # ----------------------------------------------------
-        # Stages 1 to 5: Analysis & Planning
-        # ----------------------------------------------------
-        
-        # Scout
-        print("[1/8] Discovery... ", end="", flush=True)
+        # Stages 1 to 5
+        console.print("[yellow][1/8][/yellow] Discovery... ", end="")
         state.status = ExcavationStatus.DISCOVERING
         await scout_agent.run(state)
-        print("DONE")
+        console.print("[green]DONE[/green]")
 
-        # Heritage
-        print("[2/8] Heritage Evaluation... ", end="", flush=True)
+        console.print("[yellow][2/8][/yellow] Heritage Evaluation... ", end="")
         await heritage_evaluator.run(state)
-        print("DONE")
+        console.print("[green]DONE[/green]")
 
-        # Explorer (Clone/Copy if needed)
-        print("[3/8] Software Understanding... ", end="", flush=True)
-        # Setup local path if it was cloned
-        if args.repo:
+        console.print("[yellow][3/8][/yellow] Software Understanding... ", end="")
+        if is_remote:
             state.local_path = os.path.join(local_path, project_id)
-            # Ensure folder exists
             os.makedirs(state.local_path, exist_ok=True)
-            # Use explorer cloner to copy/clone
-            await explorer_agent.run(state)
-        else:
-            await explorer_agent.run(state)
-        print("DONE")
+        await explorer_agent.run(state)
+        console.print("[green]DONE[/green]")
 
-        # Architect
-        print("[4/8] Architecture Reconstruction... ", end="", flush=True)
+        console.print("[yellow][4/8][/yellow] Architecture Reconstruction... ", end="")
         await architect_agent.run(state)
-        print("DONE")
+        console.print("[green]DONE[/green]")
 
-        # Restoration Planning
-        print("[5/8] Restoration Planning... ", end="", flush=True)
+        console.print("[yellow][5/8][/yellow] Restoration Planning... ", end="")
         await restoration_planner.run(state)
-        print("DONE")
-        print_separator("-")
+        console.print("[green]DONE[/green]\n")
 
-        # Save current state to database
         await repository.save(state)
 
-        # ----------------------------------------------------
-        # Display Scorecard & Plan
-        # ----------------------------------------------------
-        print("HERITAGE SCORECARD")
-        print_separator("-")
-        
-        score = 0
-        worth_preserving = False
-        summary_reason = "No details"
-        if state.heritage_report:
-            score = state.heritage_report.overall_score
-            worth_preserving = state.heritage_report.worth_preserving
-            summary_reason = state.heritage_report.explanation
-            
-        print(f"Overall Heritage Score: {score}/100")
-        print(f"Worth Preserving:       {'YES' if worth_preserving else 'NO'}")
-        print(f"Assessment Reason:      {summary_reason}")
-        
-        print_separator("-")
-        print("RESTORATION PLAN")
-        print_separator("-")
-        
-        issues = []
-        estimated_hours = 0.0
-        steps = []
-        if state.restoration_plan:
-            issues = state.restoration_plan.issues
-            estimated_hours = state.restoration_plan.estimated_effort_hours
-            steps = state.restoration_plan.steps
-            
+        # Heritage Scorecard display
+        score = state.heritage_report.overall_score if state.heritage_report else 0
+        worth_preserving = state.heritage_report.worth_preserving if state.heritage_report else False
+        summary_reason = state.heritage_report.explanation if state.heritage_report else "N/A"
+
+        scorecard_table = Table(title="Heritage Assessment Scorecard", show_header=False, expand=True)
+        scorecard_table.add_row("[bold]Overall Score[/bold]", f"[bold yellow]{score}/100[/bold yellow]")
+        scorecard_table.add_row("[bold]Worth Preserving[/bold]", f"[bold green]YES[/bold green]" if worth_preserving else "[bold red]NO[/bold red]")
+        scorecard_table.add_row("[bold]Summary[/bold]", summary_reason)
+        console.print(Panel(scorecard_table, border_style="cyan"))
+
+        # Restoration plan display
+        issues = state.restoration_plan.issues if state.restoration_plan else []
+        estimated_hours = state.restoration_plan.estimated_effort_hours if state.restoration_plan else 0.0
+        steps = state.restoration_plan.steps if state.restoration_plan else []
+
+        plan_table = Table(title="Restoration Strategy & Actions", show_header=True, expand=True)
+        plan_table.add_column("Property", style="bold magenta", width=25)
+        plan_table.add_column("Details", style="white")
+
         if not issues:
-            print("No major issues detected. Restoration not required.")
+            plan_table.add_row("Issues", "No major issues identified. Codebase is clean.")
         else:
-            print(f"Estimated effort: {estimated_hours} hours")
-            print(f"Identified {len(issues)} issues:")
-            for issue in issues:
-                print(f" - [{issue.severity}] {issue.issue_type}: {issue.description}")
-            print("\nRecommended setup steps:")
-            for step in steps:
-                print(f" - {step}")
-                
-        print_separator("-")
+            plan_table.add_row("Estimated Effort", f"{estimated_hours} engineering hours")
+            issues_str = "\n".join([f"- [{iss.severity}] {iss.issue_type}: {iss.description}" for iss in issues])
+            plan_table.add_row("Discovered Issues", issues_str)
+            
+        steps_str = "\n".join([f"{i+1}. {step}" for i, step in enumerate(steps)])
+        plan_table.add_row("Recommended Setup Steps", steps_str or "None")
+        console.print(Panel(plan_table, border_style="magenta"))
 
-        # ----------------------------------------------------
-        # Prompt / Confirmation
-        # ----------------------------------------------------
-        approved = args.auto_approve
+        # User approval
+        approved = auto_approve
         if not approved:
-            choice = input("Proceed with restoration? [y/N]: ").strip().lower()
-            approved = choice in ("y", "yes")
+            choice = typer.confirm("\nProceed with restoration execution and code repair?", default=False)
+            approved = choice
 
         if not approved:
-            print("Excavation halted. Project remains in AWAITING_APPROVAL state.")
-            # Write partial reports
+            console.print("\n[yellow]Excavation stopped by user request. Project remains in AWAITING_APPROVAL state.[/yellow]")
             write_reports(project_id, state)
             return
 
-        # ----------------------------------------------------
-        # Stages 6 to 8: Restoration, Validation, Evolution
-        # ----------------------------------------------------
-        print("[6/8] Restoration Execution... ", end="", flush=True)
-        # Transition state status to trigger approve flow
+        # Stages 6 to 8
+        console.print("\n[yellow][6/8][/yellow] Restoration Execution... ", end="")
         state.status = ExcavationStatus.AWAITING_APPROVAL
         await repository.save(state)
-        
-        # Execute approve_and_restore which runs Stage 6, Stage 7 (Validation), and Stage 8 (Evolution)
         state = await supervisor.approve_and_restore(project_id)
-        
-        # Check if restoration completed
-        if state.status == ExcavationStatus.COMPLETED:
-            print("DONE")
-            print("[7/8] Code Validation... PASSED")
-            print("[8/8] Evolution Planning... DONE")
-        elif state.status == ExcavationStatus.VALIDATED:
-            print("DONE")
-            print("[7/8] Code Validation... PASSED")
-            print("[8/8] Evolution Planning... FAILED")
-        elif state.status == ExcavationStatus.RESTORED:
-            print("DONE")
-            print("[7/8] Code Validation... FAILED")
-            print("[8/8] Evolution Planning... SKIPPED")
-        else:
-            print("FAILED")
-            print("[7/8] Code Validation... SKIPPED")
-            print("[8/8] Evolution Planning... SKIPPED")
-            
-        print_separator("-")
 
-        # ----------------------------------------------------
-        # Display Evolution Suggestions & Output Reports
-        # ----------------------------------------------------
+        if state.status == ExcavationStatus.COMPLETED:
+            console.print("[green]DONE[/green]")
+            console.print("[yellow][7/8][/yellow] Code Validation... [green]PASSED[/green]")
+            console.print("[yellow][8/8][/yellow] Evolution Planning... [green]DONE[/green]")
+        elif state.status == ExcavationStatus.VALIDATED:
+            console.print("[green]DONE[/green]")
+            console.print("[yellow][7/8][/yellow] Code Validation... [green]PASSED[/green]")
+            console.print("[yellow][8/8][/yellow] Evolution Planning... [red]FAILED[/red]")
+        elif state.status == ExcavationStatus.RESTORED:
+            console.print("[green]DONE[/green]")
+            console.print("[yellow][7/8][/yellow] Code Validation... [red]FAILED[/red]")
+            console.print("[yellow][8/8][/yellow] Evolution Planning... [dim]SKIPPED[/dim]")
+        else:
+            console.print("[red]FAILED[/red]")
+            console.print("[yellow][7/8][/yellow] Code Validation... [dim]SKIPPED[/dim]")
+            console.print("[yellow][8/8][/yellow] Evolution Planning... [dim]SKIPPED[/dim]")
+
+        # Evolution suggestions display
         if state.evolution_report and state.evolution_report.suggestions:
-            print("EVOLUTION SUGGESTIONS")
-            print_separator("-")
-            print(f"Generated {len(state.evolution_report.suggestions)} recommendations:")
+            sug_table = Table(title="Evolution Suggestions", show_header=True, expand=True)
+            sug_table.add_column("Category/Type", style="bold yellow", width=25)
+            sug_table.add_column("Recommendation Detail", style="white")
+
             for sug in state.evolution_report.suggestions:
-                print(f" - [{sug.suggestion_type}] {sug.title}")
-                print(f"   {sug.description}")
-            print_separator("-")
+                sug_table.add_row(sug.suggestion_type, f"[bold]{sug.title}[/bold]\n{sug.description}")
+            
+            console.print("\n")
+            console.print(Panel(sug_table, border_style="yellow"))
 
         # Write reports
         report_dir = write_reports(project_id, state)
-        print(f"Reports successfully written to:\n{report_dir}")
-        print_separator()
+        console.print(f"\n[bold green]Excavation Completed Successfully![/bold green]")
+        console.print(f"Archaeological report artifacts written to: [bold underline]{report_dir}[/bold underline]\n")
 
     except Exception as err:
-        print(f"\n[ERROR] Excavation failed: {err}")
-        import traceback
-        traceback.print_exc()
+        console.print(f"\n[bold red][ERROR] Excavation failed:[/bold red] {err}")
     finally:
-        # Clean up temporary cloning directory
         if temp_dir and os.path.exists(temp_dir):
             try:
                 shutil.rmtree(temp_dir)
@@ -286,27 +213,21 @@ async def main_async():
                 pass
 
 def write_reports(project_id: str, state: ExcavationState) -> str:
-    """Helper to write all stage data objects and a markdown summary to disk."""
     report_dir = os.path.abspath(os.path.join("reports", project_id))
     os.makedirs(report_dir, exist_ok=True)
 
-    # 1. Profile JSON
     with open(os.path.join(report_dir, "repository_profile.json"), "w", encoding="utf-8") as f:
         json.dump(serialize_pydantic(state.profile), f, indent=2, default=str)
 
-    # 2. Heritage Report JSON
     with open(os.path.join(report_dir, "heritage_report.json"), "w", encoding="utf-8") as f:
         json.dump(serialize_pydantic(state.heritage_report), f, indent=2, default=str)
 
-    # 3. Architecture Report JSON
     with open(os.path.join(report_dir, "architecture_report.json"), "w", encoding="utf-8") as f:
         json.dump(serialize_pydantic(state.architecture_report), f, indent=2, default=str)
 
-    # 4. Restoration Plan JSON
     with open(os.path.join(report_dir, "restoration_plan.json"), "w", encoding="utf-8") as f:
         json.dump(serialize_pydantic(state.restoration_plan), f, indent=2, default=str)
 
-    # 5. Validation Report JSON
     validation_status = "PASSED" if state.status in (ExcavationStatus.VALIDATED, ExcavationStatus.COMPLETED) else "FAILED/UNRUN"
     val_data = {
         "status": validation_status,
@@ -319,22 +240,19 @@ def write_reports(project_id: str, state: ExcavationState) -> str:
     with open(os.path.join(report_dir, "validation_report.json"), "w", encoding="utf-8") as f:
         json.dump(val_data, f, indent=2, default=str)
 
-    # 6. Evolution Report JSON
     with open(os.path.join(report_dir, "evolution_report.json"), "w", encoding="utf-8") as f:
         json.dump(serialize_pydantic(state.evolution_report), f, indent=2, default=str)
 
-    # 7. Summary MD
-    summary_path = os.path.join(report_dir, "summary.md")
-    
+    # Compile Summary markdown
+    from datetime import datetime
     score = state.heritage_report.overall_score if state.heritage_report else 0
     preserving = "YES" if state.heritage_report and state.heritage_report.worth_preserving else "NO"
     reason = state.heritage_report.explanation if state.heritage_report else "N/A"
     
     issues_count = len(state.restoration_plan.issues) if state.restoration_plan else 0
     effort_hours = state.restoration_plan.estimated_effort_hours if state.restoration_plan else 0.0
-    
     sug_count = len(state.evolution_report.suggestions) if state.evolution_report else 0
-    
+
     md_content = f"""# ReForge Excavation Summary: {project_id}
 
 Project ID: `{project_id}`
@@ -386,9 +304,7 @@ Final Status: **{state.status.value}**
 
 ## 5. Code Validation
 * **Status:** **{validation_status}**
-"""
 
-    md_content += f"""
 ---
 
 ## 6. Evolution Suggestions
@@ -403,11 +319,15 @@ Final Status: **{state.status.value}**
 ---
 *Generated automatically by ReForge Software Archaeology.*
 """
-    with open(summary_path, "w", encoding="utf-8") as f:
+    with open(os.path.join(report_dir, "summary.md"), "w", encoding="utf-8") as f:
         f.write(md_content)
 
     return report_dir
 
-if __name__ == "__main__":
-    from datetime import datetime
-    asyncio.run(main_async())
+def excavate(
+    target: str = typer.Argument(..., help="GitHub repository HTTPS URL or local directory path."),
+    project_id: Optional[str] = typer.Option(None, "--project-id", "-p", help="Custom name for the project workspace directory."),
+    auto_approve: bool = typer.Option(False, "--auto-approve", "-a", help="Skip restoration planning review confirmation.")
+):
+    """Execute the full 8-stage software excavation pipeline."""
+    asyncio.run(run_excavation_workflow(target, project_id, auto_approve))

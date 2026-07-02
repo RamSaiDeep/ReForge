@@ -324,6 +324,34 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Implemented report output directories (`reports/<project_id>/`) writing JSON reports and an unified `summary.md`.
   * *Rationale:* Persists structural excavation evidence that can be consumed by other programs, analyzed, or displayed in a UI dashboard later.
 
+---
+
+## [Phase 14] Modular Typer CLI & Local Packaging (2026-07-02)
+
+### Phase Status
+* **Goal:** Package ReForge as an installable CLI (`pyproject.toml` script entrypoint), migrate pipeline commands to Typer and Rich console formatting, split subcommands across modular modules (`excavate`, `list`, `report`, `status`, `doctor`), and establish robust disk database persistence for CLI executions.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Added CLI Dependencies:** Registered `typer>=0.9.0` and `rich>=13.0.0` inside `pyproject.toml` and specified global `reforge` script command pointing to `reforge.infrastructure.cli.main:main`.
+2. **Created Modular CLI Command Architecture:**
+   - Created [main.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/cli/main.py) establishing Typer root, rendering a clean 7-bit ASCII landing logo, and exposing future-proof command namespaces.
+   - Created [excavate.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/cli/excavate.py) running the end-to-end 8-stage pipeline using Rich scorecard Panels and Restoration Tables. Switched to `JSONFileProjectRepository` for database persistence.
+   - Created [list.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/cli/list.py) displaying stored project IDs, status, and heritage scores in a clean table.
+   - Created [status.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/cli/status.py) showing pipeline checkpoints reached and chronological timeline audit logs.
+   - Created [report.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/cli/report.py) retrieving Markdown or JSON state representations.
+   - Created [doctor.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/infrastructure/cli/doctor.py) validating Git PATH presence, python version, and GitHub connections.
+3. **Cleaned Scripts:** Deleted old demo script `scripts/excavate.py`.
+4. **Added CLI Tests:** Implemented [test_cli.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_cli.py) validating CliRunner execution paths.
+5. **Verified Compatibility:** Verified all 54 tests pass and successfully ran `reforge` commands locally on Windows.
+
+### Key Decisions & Rationale
+* **Decision:** Replaced unicode checkmarks (`✓`, `✗`, `•`) with standard ASCII descriptors (`PASSED`, `FAILED`, `-`) inside doctor/status console print statements.
+  * *Rationale:* Prevents Windows native shell terminals (`CP1252`) from throwing `UnicodeEncodeError` or rendering block artifacts.
+* **Decision:** Configured `JSONFileProjectRepository` inside `excavate` instead of `InMemoryProjectRepository`.
+  * *Rationale:* Persists excavation progress on disk automatically, enabling command-line list, status, and report subcommands to retrieve it.
+
+
 
 
 

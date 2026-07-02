@@ -1,10 +1,18 @@
 {
-  "issues": [],
+  "issues": [
+    {
+      "issue_type": "missing_lockfile",
+      "description": "Dependency lock file (poetry.lock) is missing. Restoring packages might install inconsistent package versions.",
+      "severity": "MEDIUM",
+      "recommended_fix": "Run 'poetry lock' to generate a consistent poetry.lock file."
+    }
+  ],
   "steps": [
     "Create python virtual environment: python -m venv .venv",
     "Activate virtual environment and upgrade pip: .venv\\Scripts\\pip install --upgrade pip",
-    "Install project dependencies: pip install -r requirements.txt"
+    "Install project dependencies: pip install -r requirements.txt",
+    "Generate dependency lock file: poetry lock"
   ],
-  "estimated_effort_hours": 0.5,
-  "explanation": "Generated restoration plan with 0 issues identified. Total estimated restoration effort: 0.5 engineering hours. Formulated 3 sequential restoration setup steps."
+  "estimated_effort_hours": 3.0,
+  "explanation": "Generated restoration plan with 1 issues identified. Total estimated restoration effort: 3.0 engineering hours. Formulated 4 sequential restoration setup steps."
 }

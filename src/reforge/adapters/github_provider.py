@@ -51,11 +51,34 @@ class GitHubProvider(GitProvider):
                 contributors_count=1,
                 last_commit_at=datetime.now(timezone.utc),
                 created_at=datetime.now(timezone.utc),
-                readme_content="# Local Project\nThis is a local directory project excavated by ReForge."
+                readme_content="# Local Project\nThis is a local directory project excavated by ReForge.",
+                releases_count=0,
+                open_issues_count=0,
+                tags_count=0,
+                total_commits_count=100,
+                ci_system_detected="GitHub Actions"
             )
         
         async with httpx.AsyncClient() as client:
             headers = self._get_headers()
+            
+            # Helper to fetch last page count from Link headers
+            async def get_page_count(url: str) -> int:
+                try:
+                    res = await client.get(url, headers=headers)
+                    if res.status_code == 200:
+                        link_header = res.headers.get("Link")
+                        if link_header:
+                            match = re.search(r'page=(\d+)>; rel="last"', link_header)
+                            if match:
+                                return int(match.group(1))
+                            else:
+                                return len(res.json())
+                        else:
+                            return len(res.json())
+                except Exception:
+                    pass
+                return 0
             
             # 1. Fetch Repository Details
             repo_api_url = f"https://api.github.com/repos/{owner}/{repo}"
@@ -69,7 +92,7 @@ class GitHubProvider(GitProvider):
                 )
             
             repo_data = response.json()
-
+ 
             # 2. Fetch Repository Languages (to calculate percentages)
             lang_api_url = f"https://api.github.com/repos/{owner}/{repo}/languages"
             lang_res = await client.get(lang_api_url, headers=headers)
@@ -79,7 +102,7 @@ class GitHubProvider(GitProvider):
                 total_bytes = sum(lang_data.values())
                 if total_bytes > 0:
                     languages = {lang: round(bytes_cnt / total_bytes, 4) for lang, bytes_cnt in lang_data.items()}
-
+ 
             # 3. Fetch README Content (using raw Accept header to avoid base64 decoding)
             readme_headers = headers.copy()
             readme_headers["Accept"] = "application/vnd.github.raw"
@@ -88,38 +111,32 @@ class GitHubProvider(GitProvider):
             readme_content: Optional[str] = None
             if readme_res.status_code == 200:
                 readme_content = readme_res.text
-
+ 
             # Clean and map GitHub date strings to datetime objects
             created_at = datetime.fromisoformat(repo_data["created_at"].replace("Z", "+00:00"))
             pushed_at = datetime.fromisoformat(repo_data["pushed_at"].replace("Z", "+00:00"))
-
-            # Note: License can be missing or can have a 'key'/'spdx_id'
+ 
+            # License
             license_name = None
             if repo_data.get("license"):
                 license_name = repo_data["license"].get("spdx_id") or repo_data["license"].get("name")
-
-            # Extract basic contributor count (simplistic fallback, using api contributors link)
-            # Fetching page 1 with per_page=1 to get link headers for true count is optimal, 
-            # but for metadata we can read forks/stars/contributors estimation or do a quick call.
-            # Let's do a simple call or estimate. Let's make a quick head/get call with 1 per_page
-            # to parse Link headers or just default to 0 and fetch async.
-            contrib_count = 0
-            contrib_api_url = f"https://api.github.com/repos/{owner}/{repo}/contributors?per_page=1"
-            contrib_res = await client.get(contrib_api_url, headers=headers)
-            if contrib_res.status_code == 200:
-                # GitHub returns a Link header for pagination. E.g.:
-                # <...page=42>; rel="last"
-                # If present, we parse the last page number.
-                link_header = contrib_res.headers.get("Link")
-                if link_header:
-                    match = re.search(r'page=(\d+)>; rel="last"', link_header)
-                    if match:
-                        contrib_count = int(match.group(1))
-                    else:
-                        contrib_count = len(contrib_res.json())
-                else:
-                    contrib_count = len(contrib_res.json())
-
+ 
+            # Fetch pagination metrics in parallel / sequentially
+            contrib_count = await get_page_count(f"https://api.github.com/repos/{owner}/{repo}/contributors?per_page=1")
+            releases_count = await get_page_count(f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=1")
+            tags_count = await get_page_count(f"https://api.github.com/repos/{owner}/{repo}/tags?per_page=1")
+            total_commits_count = await get_page_count(f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=1")
+            
+            # Detect CI System
+            ci_system_detected = None
+            ci_res = await client.get(f"https://api.github.com/repos/{owner}/{repo}/contents/.github/workflows", headers=headers)
+            if ci_res.status_code == 200:
+                ci_system_detected = "GitHub Actions"
+            else:
+                travis_res = await client.get(f"https://api.github.com/repos/{owner}/{repo}/contents/.travis.yml", headers=headers)
+                if travis_res.status_code == 200:
+                    ci_system_detected = "Travis CI"
+ 
             return RepositoryProfile(
                 url=repo_url,
                 name=repo_data["name"],
@@ -133,5 +150,10 @@ class GitHubProvider(GitProvider):
                 contributors_count=contrib_count,
                 last_commit_at=pushed_at,
                 created_at=created_at,
-                readme_content=readme_content
+                readme_content=readme_content,
+                releases_count=releases_count,
+                open_issues_count=repo_data.get("open_issues_count", 0),
+                tags_count=tags_count,
+                total_commits_count=total_commits_count,
+                ci_system_detected=ci_system_detected
             )

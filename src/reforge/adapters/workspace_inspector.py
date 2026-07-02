@@ -77,6 +77,40 @@ class LocalWorkspaceInspector(WorkspaceInspector):
 
         return frameworks
 
+    def _detect_architecture_paradigm(self, dependencies: List[str], directory_tree: Dict[str, List[str]], file_set: Set[str]) -> str:
+        dep_set = {dep.lower() for dep in dependencies}
+        
+        # 1. Clean Architecture Check
+        folders = {folder.lower() for folder in directory_tree.keys()}
+        clean_markers = {"domain", "usecases", "adapters", "infrastructure", "entities"}
+        if len(folders.intersection(clean_markers)) >= 2:
+            return "Clean Architecture"
+            
+        # 2. MVC Check
+        mvc_markers = {"models", "views", "controllers", "templates"}
+        if len(folders.intersection(mvc_markers)) >= 2:
+            return "MVC (Model-View-Controller)"
+            
+        # 3. CLI Tool Check
+        cli_libs = {"click", "typer", "argparse", "optparse", "click-completion", "colorama"}
+        if dep_set.intersection(cli_libs) or any("cli" in f.lower() or "main.py" in f.lower() for f in file_set):
+            if "click" in dep_set or "typer" in dep_set:
+                return "Command-Line Interface Utility (Click/Typer)"
+            return "Command-Line Interface Utility"
+            
+        # 4. Event-Driven Check
+        event_libs = {"kafka", "celery", "rabbitmq", "pika", "redis"}
+        event_files = {"consumer", "publisher", "events", "broker", "tasks"}
+        if dep_set.intersection(event_libs) or any(any(marker in f.lower() for marker in event_files) for f in file_set):
+            return "Event-Driven Architecture"
+
+        # 5. Plugin System Check
+        plugin_folders = {"plugins", "extensions", "addons", "modules"}
+        if folders.intersection(plugin_folders):
+            return "Plugin-based Extensible Architecture"
+            
+        return "Layered/Generic"
+
     async def inspect(self, local_path: str) -> SoftwareOverview:
         if not os.path.exists(local_path):
             raise ValueError(f"Target path does not exist: {local_path}")
@@ -139,6 +173,7 @@ class LocalWorkspaceInspector(WorkspaceInspector):
 
         # Detect frameworks based on parsed requirements & files
         frameworks = self._detect_frameworks(dependencies, file_set)
+        paradigm = self._detect_architecture_paradigm(dependencies, directory_tree, file_set)
 
         # Generate explainable summary
         detected_build = build_system or "No standard build system detected"
@@ -147,6 +182,7 @@ class LocalWorkspaceInspector(WorkspaceInspector):
         
         explanation = (
             f"Successfully crawled repository workspace. Detected build system: {detected_build}. "
+            f"Architecture Paradigm: {paradigm}. "
             f"Found {found_deps_count} library dependencies, {len(frameworks)} frameworks ({', '.join(frameworks) if frameworks else 'None'}), "
             f"and {found_docs_count} documentation files. "
             f"Entry point candidates discovered: {', '.join(entry_points) if entry_points else 'None'}."
@@ -159,5 +195,6 @@ class LocalWorkspaceInspector(WorkspaceInspector):
             build_system=build_system,
             directory_tree=directory_tree,
             documentation_files=documentation_files,
+            architecture_paradigm=paradigm,
             explanation=explanation
         )

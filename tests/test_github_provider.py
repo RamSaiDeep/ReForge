@@ -52,12 +52,35 @@ async def test_github_provider_fetch_profile_success(mock_get):
     mock_contrib_res.headers = {"Link": '<https://api.github.com/...page=12>; rel="last"'}
     mock_contrib_res.json.return_value = []
 
+    mock_releases_res = MagicMock()
+    mock_releases_res.status_code = 200
+    mock_releases_res.headers = {"Link": '<https://api.github.com/...page=3>; rel="last"'}
+    mock_releases_res.json.return_value = []
+
+    mock_tags_res = MagicMock()
+    mock_tags_res.status_code = 200
+    mock_tags_res.headers = {"Link": '<https://api.github.com/...page=5>; rel="last"'}
+    mock_tags_res.json.return_value = []
+
+    mock_commits_res = MagicMock()
+    mock_commits_res.status_code = 200
+    mock_commits_res.headers = {"Link": '<https://api.github.com/...page=120>; rel="last"'}
+    mock_commits_res.json.return_value = []
+
+    mock_ci_res = MagicMock()
+    mock_ci_res.status_code = 200
+    mock_ci_res.json.return_value = []
+
     # Assign side effects sequentially to mock HTTP calls
     mock_get.side_effect = [
-        mock_repo_res,     # Details
-        mock_lang_res,     # Languages
-        mock_readme_res,   # Readme
-        mock_contrib_res   # Contributors
+        mock_repo_res,       # Details
+        mock_lang_res,       # Languages
+        mock_readme_res,     # Readme
+        mock_contrib_res,    # Contributors
+        mock_releases_res,   # Releases
+        mock_tags_res,       # Tags
+        mock_commits_res,    # Commits
+        mock_ci_res          # CI Detection
     ]
 
     profile = await provider.fetch_profile("https://github.com/archaeologist/my-archaeology-project")
@@ -73,6 +96,10 @@ async def test_github_provider_fetch_profile_success(mock_get):
     assert profile.license == "GPL-3.0"
     assert profile.contributors_count == 12
     assert profile.readme_content == "# My Project\nArchaeology text."
+    assert profile.releases_count == 3
+    assert profile.tags_count == 5
+    assert profile.total_commits_count == 120
+    assert profile.ci_system_detected == "GitHub Actions"
 
 
 @pytest.mark.asyncio

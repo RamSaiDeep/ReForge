@@ -44,6 +44,11 @@ class RepositoryProfile(BaseModel):
     last_commit_at: datetime = Field(..., description="The date and time of the last commit")
     created_at: datetime = Field(..., description="The date and time of repository creation")
     readme_content: Optional[str] = Field(default=None, description="The raw contents of the README file")
+    releases_count: int = Field(default=0, ge=0, description="Total number of releases published")
+    open_issues_count: int = Field(default=0, ge=0, description="Total open issues count")
+    tags_count: int = Field(default=0, ge=0, description="Total git tags/versions count")
+    total_commits_count: int = Field(default=0, ge=0, description="Estimated total commit count")
+    ci_system_detected: Optional[str] = Field(default=None, description="Primary detected CI pipeline type (e.g. GitHub Actions, Travis)")
 
 
 class PreservationCategory(BaseModel):
@@ -123,6 +128,10 @@ class SoftwareOverview(BaseModel):
     )
     documentation_files: List[str] = Field(
         default_factory=list, description="List of markdown/text documentation files found in the source"
+    )
+    architecture_paradigm: Optional[str] = Field(
+        default="Layered/Generic", 
+        description="Detected architectural paradigm (e.g. MVC, Clean Architecture, Command-Line Utility, Event-Driven)"
     )
     explanation: str = Field(..., description="Explainable description of the software structure")
 

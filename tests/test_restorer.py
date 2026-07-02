@@ -104,3 +104,34 @@ async def test_restorer_agent_missing_inputs():
     )
     with pytest.raises(ValueError, match="must contain an approved restoration_plan"):
         await agent.run(state2)
+
+
+@pytest.mark.asyncio
+async def test_local_restoration_executor_semantic_migrations(tmp_path):
+    # Setup legacy python file with deprecated imp library
+    legacy_py = tmp_path / "legacy.py"
+    legacy_py.write_text("import imp\ndef load():\n    imp.load_source('mod', 'file.py')\n", encoding="utf-8")
+
+    plan = RestorationPlan(
+        issues=[],
+        steps=[
+            "Add project license file: create LICENSE",
+            "Configure automated CI workflow: create .github/workflows/ci.yml",
+            "Refactor deprecated Python imports: replace 'imp' usage"
+        ],
+        estimated_effort_hours=4.5,
+        explanation="Archaeological refactoring."
+    )
+
+    executor = LocalRestorationExecutor()
+    logs = await executor.execute(str(tmp_path), plan)
+
+    # Check assertions for filesystem repairs
+    assert os.path.exists(tmp_path / "LICENSE")
+    assert os.path.exists(tmp_path / ".github" / "workflows" / "ci.yml")
+
+    # Check assertion that source file was semantically refactored
+    content = legacy_py.read_text(encoding="utf-8")
+    assert "import importlib as imp" in content
+    assert "imp.load_source" in content
+    assert any("[FS] Refactored" in log for log in logs)

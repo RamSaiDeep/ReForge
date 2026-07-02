@@ -52,3 +52,27 @@ async def test_local_workspace_inspector(tmp_path):
     assert "" in overview.directory_tree
     assert "README.md" in overview.directory_tree[""]
     assert "docs" in overview.directory_tree
+
+
+@pytest.mark.asyncio
+async def test_local_workspace_inspector_architecture_paradigms(tmp_path):
+    # Setup Clean Architecture structure in tmp_path/clean
+    clean_dir = tmp_path / "clean"
+    os.makedirs(clean_dir / "domain", exist_ok=True)
+    os.makedirs(clean_dir / "adapters", exist_ok=True)
+    os.makedirs(clean_dir / "infrastructure", exist_ok=True)
+    (clean_dir / "README.md").write_text("# Clean Project", encoding="utf-8")
+
+    inspector = LocalWorkspaceInspector()
+    clean_overview = await inspector.inspect(str(clean_dir))
+    assert clean_overview.architecture_paradigm == "Clean Architecture"
+
+    # Setup MVC structure in tmp_path/mvc
+    mvc_dir = tmp_path / "mvc"
+    os.makedirs(mvc_dir / "models", exist_ok=True)
+    os.makedirs(mvc_dir / "views", exist_ok=True)
+    os.makedirs(mvc_dir / "controllers", exist_ok=True)
+    (mvc_dir / "README.md").write_text("# MVC Project", encoding="utf-8")
+
+    mvc_overview = await inspector.inspect(str(mvc_dir))
+    assert mvc_overview.architecture_paradigm == "MVC (Model-View-Controller)"

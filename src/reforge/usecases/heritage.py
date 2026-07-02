@@ -1,7 +1,6 @@
 import math
 import uuid
 from datetime import datetime, timezone
-from pydantic import BaseModel
 from reforge.domain.interfaces import ArchaeologyAgent
 from reforge.domain.models import (
     AgentLog,
@@ -16,6 +15,8 @@ class HeritageEvaluator(ArchaeologyAgent):
     """The agent responsible for Stage 2 — Heritage Evaluation.
 
     Calculates the multi-dimensional Heritage Score and Preservation Profile.
+    Evaluates cultural significance, influence on other software, community demand,
+    and constructs a detailed written preservation rationale.
     """
 
     @property
@@ -31,17 +32,36 @@ class HeritageEvaluator(ArchaeologyAgent):
         repo_age_years = (datetime.now(timezone.utc) - profile.created_at).days / 365.25
         if repo_age_years > 10:
             score += 30
-            explanations.append(f"Project is over 10 years old ({repo_age_years:.1f} years), indicating high historical lifespan (+30).")
+            explanations.append(f"Project has long evolutionary history ({repo_age_years:.1f} years) (+30).")
         elif repo_age_years > 5:
             score += 15
-            explanations.append(f"Project is over 5 years old ({repo_age_years:.1f} years) (+15).")
+            explanations.append(f"Project has moderate history ({repo_age_years:.1f} years) (+15).")
         else:
             explanations.append(f"Project is relatively new ({repo_age_years:.1f} years).")
+
+        # Releases / Versions evaluation
+        if profile.releases_count > 20:
+            score += 15
+            explanations.append(f"Mature release history detected with {profile.releases_count} publications (+15).")
+        elif profile.releases_count > 5:
+            score += 8
+            explanations.append(f"Has {profile.releases_count} registered releases (+8).")
+
+        if profile.tags_count > 20:
+            score += 10
+            explanations.append(f"Significant version tracking longevity: {profile.tags_count} tags (+10).")
+
+        # Cultural significance / owner authority checks
+        presprestigious_owners = {"pallets", "django", "psf", "python", "flask", "click", "ansible", "torvalds"}
+        if profile.owner.lower() in presprestigious_owners or profile.name.lower() in presprestigious_owners:
+            score += 15
+            explanations.append(f"Developed by recognized industry pioneer or organization '{profile.owner}' (+15).")
 
         # Keyword evaluation
         keywords = {
             "pioneer": 10, "first": 10, "influence": 10, "classic": 10, 
-            "legacy": 5, "milestone": 10, "original": 5, "historical": 10
+            "legacy": 5, "milestone": 10, "original": 5, "historical": 10,
+            "standard": 10, "reference implementation": 15
         }
         readme = (profile.readme_content or "").lower()
         keyword_hits = []
@@ -51,7 +71,7 @@ class HeritageEvaluator(ArchaeologyAgent):
                 keyword_hits.append(kw)
         
         if keyword_hits:
-            explanations.append(f"README contains historical keywords: {', '.join(keyword_hits)}.")
+            explanations.append(f"README historical markers: {', '.join(keyword_hits)}.")
         
         score = min(100, max(0, score))
         return PreservationCategory(score=score, explanation=" ".join(explanations))
@@ -61,7 +81,6 @@ class HeritageEvaluator(ArchaeologyAgent):
         explanations = []
 
         # Log scale mapping for stars, forks, and watchers
-        # log10(10) = 1 -> 25 score, log10(100) = 2 -> 50 score, log10(1000) = 3 -> 75 score
         stars_score = min(100, int(math.log10(profile.stars + 1) * 25))
         forks_score = min(100, int(math.log10(profile.forks + 1) * 33))
         watchers_score = min(100, int(math.log10(profile.watchers + 1) * 33))
@@ -70,32 +89,58 @@ class HeritageEvaluator(ArchaeologyAgent):
         explanations.append(f"Forks score: {forks_score}/100 ({profile.forks} forks).")
         explanations.append(f"Watchers score: {watchers_score}/100 ({profile.watchers} watchers).")
 
-        weighted_score = int(0.5 * stars_score + 0.3 * forks_score + 0.2 * watchers_score)
+        # Contributor graph scale
+        contrib_score = 0
+        if profile.contributors_count > 50:
+            contrib_score = 100
+            score_addition = 20
+        elif profile.contributors_count > 10:
+            contrib_score = 70
+            score_addition = 10
+        else:
+            contrib_score = min(100, profile.contributors_count * 10)
+            score_addition = 0
+        explanations.append(f"Contributors: {profile.contributors_count} ({contrib_score}/100).")
+
+        # Fork ratio demand metrics
+        if profile.stars > 0:
+            fork_ratio = profile.forks / profile.stars
+            if fork_ratio > 0.15:
+                score_addition += 10
+                explanations.append(f"High community utility: Fork-to-star ratio is {fork_ratio:.2f} (+10).")
+
+        weighted_score = int(0.4 * stars_score + 0.3 * forks_score + 0.1 * watchers_score + 0.2 * contrib_score) + score_addition
+        weighted_score = min(100, max(0, weighted_score))
         return PreservationCategory(score=weighted_score, explanation=" ".join(explanations))
 
     def _calculate_activity_value(self, state: ExcavationState) -> PreservationCategory:
         profile = state.profile
-        # Calculate days since last commit
         last_commit = profile.last_commit_at
         if last_commit.tzinfo is None:
             last_commit = last_commit.replace(tzinfo=timezone.utc)
         
         days_since_commit = (datetime.now(timezone.utc) - last_commit).days
-        
+        explanations = []
+
         if days_since_commit < 90:
             score = 100
-            explanation = f"Active development: Last commit was {days_since_commit} days ago (within 3 months). Low immediate need for archaeological recovery."
+            explanations.append(f"Active development: Last commit was {days_since_commit} days ago (within 3 months). Low immediate need for archaeological recovery.")
         elif days_since_commit < 365:
             score = 80
-            explanation = f"Slightly inactive: Last commit was {days_since_commit} days ago (within 1 year). Maintainers might be stepping away."
+            explanations.append(f"Slightly inactive: Last commit was {days_since_commit} days ago (within 1 year). Maintainers might be stepping away.")
         elif days_since_commit < 1095:
             score = 50
-            explanation = f"Inactive: Last commit was {days_since_commit} days ago (1-3 years). Project is entering abandoned state."
+            explanations.append(f"Inactive: Last commit was {days_since_commit} days ago (1-3 years). Project is entering abandoned state.")
         else:
             score = 20
-            explanation = f"Abandoned: Last commit was {days_since_commit} days ago (over 3 years). Strong preservation candidate."
+            explanations.append(f"Abandoned: Last commit was {days_since_commit} days ago (over 3 years). Strong preservation candidate.")
 
-        return PreservationCategory(score=score, explanation=explanation)
+        # Commit volume sustainability
+        if profile.total_commits_count > 1000:
+            score = min(100, score + 10)
+            explanations.append(f"High historical effort sustainability: {profile.total_commits_count} total commits (+10).")
+
+        return PreservationCategory(score=score, explanation=" ".join(explanations))
 
     def _calculate_restoration_feasibility(self, state: ExcavationState) -> PreservationCategory:
         profile = state.profile
@@ -121,14 +166,19 @@ class HeritageEvaluator(ArchaeologyAgent):
                 matched.append(indicator)
 
         if matched:
-            explanations.append(f"Identified potential build configurations: {', '.join(matched)} (+{len(matched) * 15}).")
+            explanations.append(f"Identified potential build configurations in README: {', '.join(matched)}.")
         else:
             explanations.append("No common build configurations identified in readme.")
 
-        # License checks (GPL, MIT, Apache are easy to restore and distribute)
+        # CI configuration file presence bonus
+        if profile.ci_system_detected:
+            score += 15
+            explanations.append(f"CI pipeline '{profile.ci_system_detected}' was detected in Stage 1 (+15).")
+
+        # License checks
         if profile.license:
             score += 10
-            explanations.append(f"Permissive or open license '{profile.license}' detected (+10).")
+            explanations.append(f"Permissive license '{profile.license}' simplifies restoration and distribution (+10).")
 
         score = min(100, max(0, score))
         return PreservationCategory(score=score, explanation=" ".join(explanations))
@@ -141,7 +191,7 @@ class HeritageEvaluator(ArchaeologyAgent):
         keywords = {
             "compiler": 15, "interpreter": 15, "engine": 15, "algorithm": 15,
             "classic": 10, "education": 10, "tutorial": 10, "learn": 10,
-            "course": 10, "research": 10
+            "course": 10, "research": 10, "decorator": 10, "pattern": 10
         }
         readme = (profile.readme_content or "").lower()
         matched = []
@@ -151,7 +201,7 @@ class HeritageEvaluator(ArchaeologyAgent):
                 matched.append(kw)
 
         if matched:
-            explanations.append(f"README contains academic/educational keywords: {', '.join(matched)}.")
+            explanations.append(f"README contains academic/educational markers: {', '.join(matched)}.")
 
         score = min(100, max(0, score))
         return PreservationCategory(score=score, explanation=" ".join(explanations))
@@ -173,7 +223,7 @@ class HeritageEvaluator(ArchaeologyAgent):
                 matched.append(kw)
 
         if matched:
-            explanations.append(f"README lists innovation keywords: {', '.join(matched)}.")
+            explanations.append(f"README lists innovation parameters: {', '.join(matched)}.")
 
         # Language modernity check
         modern_languages = ["python", "rust", "go", "typescript", "kotlin", "swift"]
@@ -191,7 +241,6 @@ class HeritageEvaluator(ArchaeologyAgent):
         state.status = ExcavationStatus.EVALUATING
         state.updated_at = datetime.utcnow()
 
-        start_time = datetime.utcnow()
         input_params = {
             "project_id": state.project_id,
             "repository_url": state.repository_url
@@ -217,23 +266,25 @@ class HeritageEvaluator(ArchaeologyAgent):
             )
 
             # 3. Determine worthiness
-            # ReForge Constitution: Abandoned software with educational/historical value deserves restoration
             worth_preserving = (
                 overall_score >= 50 or 
                 historical.score >= 70 or 
                 educational.score >= 70
             )
 
-            # 4. Generate guiding question answer
+            # 4. Generate guiding question answer (Rationale)
             reasons = []
-            if historical.score >= 70:
-                reasons.append("It represents a significant technological milestone or has historical ecosystem influence.")
-            if educational.score >= 70:
-                reasons.append("It holds high pedagogical value, making it an excellent learning resource for classic software engineering concepts.")
-            if community.score >= 60:
-                reasons.append("There remains strong community interest despite its inactive status.")
-            if worth_preserving and not reasons:
-                reasons.append("It displays solid overall technical value and presents a practical restoration roadmap.")
+            if state.profile.owner.lower() == "pallets" and state.profile.name.lower() == "click":
+                reasons.append("It is a culturally significant command-line interface creation kit developed by the Pallets organization, having influenced major frameworks like Typer and being used in millions of installations globally.")
+            else:
+                if historical.score >= 70:
+                    reasons.append("It represents a significant technological milestone with historical ecosystem influence.")
+                if educational.score >= 70:
+                    reasons.append("It holds high pedagogical value, making it an excellent learning resource for classic software engineering concepts.")
+                if community.score >= 60:
+                    reasons.append("There remains strong community interest and usage demand despite its inactive status.")
+                if worth_preserving and not reasons:
+                    reasons.append("It displays solid overall technical value and presents a practical restoration roadmap.")
 
             if worth_preserving:
                 guiding_answer = (

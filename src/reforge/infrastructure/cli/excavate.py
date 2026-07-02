@@ -311,11 +311,13 @@ Final Status: **{state.status.value}**
 * **Heritage Score:** {score}/100
 * **Worth Preserving:** **{preserving}**
 * **Assessment Summary:** {reason}
+* **Preservation Rationale:** {state.heritage_report.guiding_question_answer if state.heritage_report else "N/A"}
 
 ---
 
 ## 2. Software Overview
 * **Primary Language:** {state.profile.primary_language if state.profile else "Unknown"}
+* **Architecture Paradigm:** {state.software_overview.architecture_paradigm if state.software_overview else "Layered/Generic"}
 * **Detected Frameworks:** {", ".join(state.software_overview.frameworks) if state.software_overview and state.software_overview.frameworks else "None"}
 * **Detected Dependencies:** {", ".join(state.software_overview.dependencies) if state.software_overview and state.software_overview.dependencies else "None"}
 * **Build System:** {state.software_overview.build_system if state.software_overview else "None"}

@@ -1,5 +1,6 @@
 import os
 import re
+import ast
 from typing import Dict, List, Set
 from reforge.domain.interfaces import CodeAnalyzer
 from reforge.domain.models import ArchitectureReport
@@ -7,7 +8,7 @@ from reforge.domain.models import ArchitectureReport
 class LocalCodeAnalyzer(CodeAnalyzer):
     """Concrete implementation of CodeAnalyzer traversing source files.
 
-    Performs regex-based import analysis to map internal module couplings and architectural layer relationships.
+    Performs AST-based import analysis to map internal module couplings and architectural layer relationships.
     """
 
     def __init__(self) -> None:
@@ -18,22 +19,55 @@ class LocalCodeAnalyzer(CodeAnalyzer):
         rel_path = os.path.relpath(file_path, base_path)
         return rel_path.replace("\\", "/")
 
-    def _parse_python_imports(self, file_path: str) -> List[str]:
-        """Scan python files for import statements."""
+    def _parse_python_imports(self, file_path: str, rel_key: str) -> List[str]:
+        """Scan python files using abstract syntax trees to extract import statements."""
+        imports = []
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            
+            tree = ast.parse(content, filename=file_path)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for name in node.names:
+                        imports.append(name.name)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level > 0:
+                        # Handle relative imports: e.g. from ..domain.models import X
+                        parts = rel_key.split("/")
+                        # Slice off file name and the number of relative dots
+                        package_parts = parts[:-1]
+                        if node.level <= len(package_parts):
+                            parent_parts = package_parts[:-(node.level - 1)] if node.level > 1 else package_parts
+                            rel_module = ".".join(parent_parts)
+                            if node.module:
+                                imports.append(f"{rel_module}.{node.module}")
+                            else:
+                                imports.append(rel_module)
+                        else:
+                            if node.module:
+                                imports.append(node.module)
+                    else:
+                        if node.module:
+                            imports.append(node.module)
+        except Exception:
+            # Fallback to regex-based parser if AST parsing fails
+            imports = self._parse_python_imports_regex_fallback(file_path)
+        return imports
+
+    def _parse_python_imports_regex_fallback(self, file_path: str) -> List[str]:
+        """Regex-based fallback parser if AST parsing fails."""
         imports = []
         import_pattern = re.compile(r"^\s*import\s+([a-zA-Z0-9_\.,\s]+)")
         from_pattern = re.compile(r"^\s*from\s+([a-zA-Z0-9_\.]+)\s+import")
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 for line in f:
-                    # Match standard 'import x'
                     imp_match = import_pattern.match(line)
                     if imp_match:
-                        # Split multiple imports on comma (e.g., import os, sys)
                         parts = [p.strip() for p in imp_match.group(1).split(",")]
                         imports.extend(parts)
-                    # Match 'from y import z'
                     from_match = from_pattern.match(line)
                     if from_match:
                         imports.append(from_match.group(1))
@@ -47,13 +81,12 @@ class LocalCodeAnalyzer(CodeAnalyzer):
         E.g., if we import 'reforge.domain.models', does it match 'src/reforge/domain/models.py'?
         """
         resolved = []
-        # Convert import representation (reforge.domain.models) to path-like (reforge/domain/models)
         module_path_part = imported_module.replace(".", "/")
         
         for mod in all_modules:
-            # Strip file extension
             mod_no_ext, _ = os.path.splitext(mod)
-            if mod_no_ext.endswith(module_path_part) or module_path_part in mod_no_ext:
+            # Match exact match or tail match
+            if mod_no_ext == module_path_part or mod_no_ext.endswith("/" + module_path_part) or mod_no_ext.endswith(module_path_part):
                 resolved.append(mod)
         return resolved
 
@@ -61,11 +94,7 @@ class LocalCodeAnalyzer(CodeAnalyzer):
         """Deduce high-level component name from path directories."""
         parts = relative_path.split("/")
         if len(parts) > 1:
-            # If path is src/reforge/domain/models.py, 'domain' or first folder under src/reforge is key
-            # Let's clean commonly nested packages: src/reforge/domain -> domain
             if parts[0] == "src" and len(parts) > 2:
-                # E.g. src/reforge/domain/models.py -> 'domain' or second folder
-                # Let's inspect: if parts[1] is package name (like reforge) and parts[2] is directory
                 if len(parts) > 3 and parts[1].isidentifier():
                     return parts[2]
                 return parts[1]
@@ -99,7 +128,7 @@ class LocalCodeAnalyzer(CodeAnalyzer):
             comp = self._get_component_name(rel_key)
             components_set.add(comp)
             
-            raw_imports = self._parse_python_imports(abs_path)
+            raw_imports = self._parse_python_imports(abs_path, rel_key)
             
             # Resolve raw imports to internal modules
             internal_deps = []

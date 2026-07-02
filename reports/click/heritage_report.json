@@ -1,22 +1,22 @@
 {
   "repository_url": "https://github.com/pallets/click",
-  "overall_score": 70,
+  "overall_score": 79,
   "profile": {
     "historical_value": {
-      "score": 80,
-      "explanation": "Baseline historical value set to 50. Project is over 10 years old (12.2 years), indicating high historical lifespan (+30)."
+      "score": 100,
+      "explanation": "Baseline historical value set to 50. Project has long evolutionary history (12.2 years) (+30). Mature release history detected with 29 publications (+15). Significant version tracking longevity: 70 tags (+10). Developed by recognized industry pioneer or organization 'pallets' (+15)."
     },
     "community_value": {
-      "score": 94,
-      "explanation": "Stars score: 100/100 (17555 stars). Forks score: 100/100 (1824 forks). Watchers score: 74/100 (182 watchers)."
+      "score": 100,
+      "explanation": "Stars score: 100/100 (17555 stars). Forks score: 100/100 (1824 forks). Watchers score: 74/100 (182 watchers). Contributors: 405 (100/100)."
     },
     "activity_sustainability": {
       "score": 100,
-      "explanation": "Active development: Last commit was 0 days ago (within 3 months). Low immediate need for archaeological recovery."
+      "explanation": "Active development: Last commit was 0 days ago (within 3 months). Low immediate need for archaeological recovery. High historical effort sustainability: 3258 total commits (+10)."
     },
     "restoration_feasibility": {
-      "score": 40,
-      "explanation": "Baseline restoration feasibility set to 30. No common build configurations identified in readme. Permissive or open license 'BSD-3-Clause' detected (+10)."
+      "score": 55,
+      "explanation": "Baseline restoration feasibility set to 30. No common build configurations identified in readme. CI pipeline 'GitHub Actions' was detected in Stage 1 (+15). Permissive license 'BSD-3-Clause' simplifies restoration and distribution (+10)."
     },
     "educational_value": {
       "score": 40,
@@ -28,6 +28,6 @@
     }
   },
   "worth_preserving": true,
-  "guiding_question_answer": "This software deserves another chapter because: It represents a significant technological milestone or has historical ecosystem influence. There remains strong community interest despite its inactive status.",
-  "explanation": "Heritage evaluation completed. Overall score: 70/100. Historical: 80, Educational: 40, Feasibility: 40. Worth preserving: True."
+  "guiding_question_answer": "This software deserves another chapter because: It is a culturally significant command-line interface creation kit developed by the Pallets organization, having influenced major frameworks like Typer and being used in millions of installations globally.",
+  "explanation": "Heritage evaluation completed. Overall score: 79/100. Historical: 100, Educational: 40, Feasibility: 55. Worth preserving: True."
 }

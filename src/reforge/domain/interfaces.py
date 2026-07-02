@@ -1,21 +1,14 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel
-from reforge.domain.models import ExcavationState, RepositoryProfile, SoftwareOverview, ArchitectureReport, RestorationPlan
+from reforge.domain.models import ExcavationState, RepositoryProfile, SoftwareOverview, ArchitectureReport, RestorationPlan, ValidationReport
 
 class CodeValidator(ABC):
     """Abstract interface for running validation or syntax compilations on a codebase."""
 
     @abstractmethod
-    async def validate(self, local_path: str) -> bool:
-        """Scan codebase files and run compilation/validation checks.
-
-        Args:
-            local_path: The local filesystem path of the repository workspace.
-
-        Returns:
-            True if codebase compiles successfully without syntax errors, False otherwise.
-        """
+    async def validate(self, local_path: str) -> ValidationReport:
+        """Scan codebase files, run syntax/compile, detect and run test suites, check lints, and return a ValidationReport."""
         pass
 
 

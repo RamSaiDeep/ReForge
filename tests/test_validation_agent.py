@@ -1,7 +1,7 @@
 import os
 import pytest
 from unittest.mock import AsyncMock
-from reforge.domain.models import ExcavationState, ExcavationStatus
+from reforge.domain.models import ExcavationState, ExcavationStatus, ValidationReport
 from reforge.adapters.code_validator import LocalCodeValidator
 from reforge.usecases.validation_agent import ValidationAgent
 
@@ -25,7 +25,9 @@ async def test_local_code_validator_success(tmp_path):
 
     validator = LocalCodeValidator()
     result = await validator.validate(str(tmp_path))
-    assert result is True
+    assert result.overall_status == "PASSED"
+    assert result.syntax_status == "PASSED"
+    assert result.files_compiled == 1
 
 
 @pytest.mark.asyncio
@@ -38,18 +40,32 @@ async def test_local_code_validator_syntax_error(tmp_path):
 
     validator = LocalCodeValidator()
     result = await validator.validate(str(tmp_path))
-    assert result is False
+    assert result.overall_status == "FAILED"
+    assert result.syntax_status == "FAILED"
 
 
 @pytest.mark.asyncio
 async def test_validation_agent_success(base_state):
     mock_validator = AsyncMock()
-    mock_validator.validate.return_value = True
+    mock_report = ValidationReport(
+        overall_status="PASSED",
+        files_compiled=1,
+        pytest_discovered=False,
+        tests_passed=0,
+        tests_failed=0,
+        syntax_status="PASSED",
+        imports_status="PASSED",
+        tests_status="SKIPPED",
+        build_status="PASSED",
+        lint_status="PASSED",
+        explanation="Stub validation passed"
+    )
+    mock_validator.validate.return_value = mock_report
 
     agent = ValidationAgent(validator=mock_validator)
     result = await agent.run(base_state)
 
-    assert result is True
+    assert result.overall_status == "PASSED"
     assert base_state.status == ExcavationStatus.VALIDATED
     assert len(base_state.audit_logs) == 1
     assert base_state.audit_logs[0].action_type == "VALIDATION_SUCCESS"
@@ -58,7 +74,20 @@ async def test_validation_agent_success(base_state):
 @pytest.mark.asyncio
 async def test_validation_agent_failure(base_state):
     mock_validator = AsyncMock()
-    mock_validator.validate.return_value = False
+    mock_report = ValidationReport(
+        overall_status="FAILED",
+        files_compiled=1,
+        pytest_discovered=False,
+        tests_passed=0,
+        tests_failed=0,
+        syntax_status="FAILED",
+        imports_status="PASSED",
+        tests_status="SKIPPED",
+        build_status="PASSED",
+        lint_status="PASSED",
+        explanation="Stub validation failed"
+    )
+    mock_validator.validate.return_value = mock_report
 
     agent = ValidationAgent(validator=mock_validator)
     

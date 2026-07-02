@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from reforge.domain.interfaces import ArchaeologyAgent, CodeValidator
-from reforge.domain.models import AgentLog, ExcavationState, ExcavationStatus
+from reforge.domain.models import AgentLog, ExcavationState, ExcavationStatus, ValidationReport
 
 class ValidationAgent(ArchaeologyAgent):
     """The agent responsible for running compile/syntax checks to validate a restored codebase."""
@@ -13,7 +13,7 @@ class ValidationAgent(ArchaeologyAgent):
     def name(self) -> str:
         return "Validation Agent"
 
-    async def run(self, state: ExcavationState) -> bool:
+    async def run(self, state: ExcavationState) -> ValidationReport:
         if not state.local_path:
             raise ValueError("ExcavationState must contain local_path to execute validation.")
 
@@ -26,13 +26,14 @@ class ValidationAgent(ArchaeologyAgent):
         }
 
         try:
-            success = await self.validator.validate(state.local_path)
+            report = await self.validator.validate(state.local_path)
+            state.validation_report = report
             
-            if success:
+            if report.overall_status == "PASSED":
                 state.status = ExcavationStatus.VALIDATED
                 state.updated_at = datetime.utcnow()
 
-                explanation = "Successfully validated restored codebase. Checked python file syntax and verified compile integrity."
+                explanation = f"Successfully validated restored codebase. {report.explanation}"
                 log_entry = AgentLog(
                     id=str(uuid.uuid4()),
                     project_id=state.project_id,
@@ -40,16 +41,16 @@ class ValidationAgent(ArchaeologyAgent):
                     action_type="VALIDATION_SUCCESS",
                     timestamp=datetime.utcnow(),
                     input_parameters=input_params,
-                    output_result="All files compiled successfully without syntax errors.",
+                    output_result=report.explanation,
                     explanation=explanation
                 )
                 state.audit_logs.append(log_entry)
-                return True
+                return report
             else:
                 state.status = ExcavationStatus.FAILED
                 state.updated_at = datetime.utcnow()
 
-                explanation = "Validation check failed: Codebase contains syntax errors or py_compile warnings."
+                explanation = f"Validation check failed: {report.explanation}"
                 log_entry = AgentLog(
                     id=str(uuid.uuid4()),
                     project_id=state.project_id,
@@ -57,11 +58,11 @@ class ValidationAgent(ArchaeologyAgent):
                     action_type="VALIDATION_FAILED",
                     timestamp=datetime.utcnow(),
                     input_parameters=input_params,
-                    output_result="Syntax compilation errors identified.",
+                    output_result="Code validation checks failed.",
                     explanation=explanation
                 )
                 state.audit_logs.append(log_entry)
-                raise ValueError("Validation failed: Codebase contains syntax errors.")
+                raise ValueError(f"Validation failed: {report.explanation}")
 
         except ValueError as err:
             # Re-raise validation failure already logged

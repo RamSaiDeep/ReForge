@@ -108,6 +108,36 @@ async def run_status(project_id: str):
         console.print(f"[bold yellow]Heritage Score:[/bold yellow] [bold green]{state.heritage_report.overall_score}/100[/bold green]")
         console.print(f"[bold yellow]Worth Preserving:[/bold yellow] [bold]{'YES' if state.heritage_report.worth_preserving else 'NO'}[/bold]\n")
 
+    # Validation Scorecard display
+    if state.validation_report:
+        val = state.validation_report
+        val_table = Table(title="Validation Scorecard", show_header=True, expand=True)
+        val_table.add_column("Check", style="bold cyan")
+        val_table.add_column("Status", style="bold")
+        val_table.add_column("Metrics / Details")
+        
+        def style_status(status_val: str) -> str:
+            if status_val == "PASSED":
+                return "[green]PASSED[/green]"
+            elif status_val == "FAILED":
+                return "[red]FAILED[/red]"
+            else:
+                return f"[yellow]{status_val}[/yellow]"
+        
+        val_table.add_row("Syntax", style_status(val.syntax_status), f"{val.files_compiled} files compiled successfully")
+        val_table.add_row("Imports", style_status(val.imports_status), "No broken imports" if val.imports_status == "PASSED" else "Unresolved imports detected")
+        
+        test_metrics = "No tests discovered"
+        if val.pytest_discovered:
+            test_metrics = f"{val.tests_passed} passed, {val.tests_failed} failed"
+        val_table.add_row("Tests", style_status(val.tests_status), test_metrics)
+        
+        val_table.add_row("Build", style_status(val.build_status), "Manifest files present" if val.build_status == "PASSED" else "No manifests found")
+        val_table.add_row("Lint", style_status(val.lint_status), "Code style clean" if val.lint_status == "PASSED" else "Lints or style issues identified")
+        
+        console.print(Panel(val_table, border_style="green" if val.overall_status == "PASSED" else "red"))
+        console.print()
+
     # Recent logs list
     if state.audit_logs:
         log_table = Table(title="Recent Audit Logs (Timeline)", show_header=True)

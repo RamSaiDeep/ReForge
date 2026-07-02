@@ -186,6 +186,35 @@ async def run_excavation_workflow(target: str, project_id: Optional[str], auto_a
             console.print("[yellow][7/8][/yellow] Code Validation... [dim]SKIPPED[/dim]")
             console.print("[yellow][8/8][/yellow] Evolution Planning... [dim]SKIPPED[/dim]")
 
+        # Validation Scorecard display
+        if state.validation_report:
+            val = state.validation_report
+            val_table = Table(title="Validation Scorecard", show_header=True, expand=True)
+            val_table.add_column("Check", style="bold cyan")
+            val_table.add_column("Status", style="bold")
+            val_table.add_column("Metrics / Details")
+            
+            def style_status(status_val: str) -> str:
+                if status_val == "PASSED":
+                    return "[green]PASSED[/green]"
+                elif status_val == "FAILED":
+                    return "[red]FAILED[/red]"
+                else:
+                    return f"[yellow]{status_val}[/yellow]"
+            
+            val_table.add_row("Syntax", style_status(val.syntax_status), f"{val.files_compiled} files compiled successfully")
+            val_table.add_row("Imports", style_status(val.imports_status), "No broken imports" if val.imports_status == "PASSED" else "Unresolved imports detected")
+            
+            test_metrics = "No tests discovered"
+            if val.pytest_discovered:
+                test_metrics = f"{val.tests_passed} passed, {val.tests_failed} failed"
+            val_table.add_row("Tests", style_status(val.tests_status), test_metrics)
+            
+            val_table.add_row("Build", style_status(val.build_status), "Manifest files present" if val.build_status == "PASSED" else "No manifests found")
+            val_table.add_row("Lint", style_status(val.lint_status), "Code style clean" if val.lint_status == "PASSED" else "Lints or style issues identified")
+            
+            console.print(Panel(val_table, border_style="green" if val.overall_status == "PASSED" else "red"))
+
         # Evolution suggestions display
         if state.evolution_report and state.evolution_report.suggestions:
             sug_table = Table(title="Evolution Suggestions", show_header=True, expand=True)
@@ -238,7 +267,10 @@ def write_reports(project_id: str, state: ExcavationState) -> str:
         ]
     }
     with open(os.path.join(report_dir, "validation_report.json"), "w", encoding="utf-8") as f:
-        json.dump(val_data, f, indent=2, default=str)
+        if state.validation_report:
+            json.dump(serialize_pydantic(state.validation_report), f, indent=2, default=str)
+        else:
+            json.dump(val_data, f, indent=2, default=str)
 
     with open(os.path.join(report_dir, "evolution_report.json"), "w", encoding="utf-8") as f:
         json.dump(serialize_pydantic(state.evolution_report), f, indent=2, default=str)
@@ -304,8 +336,23 @@ Final Status: **{state.status.value}**
 
 ## 5. Code Validation
 * **Status:** **{validation_status}**
+"""
+    if state.validation_report:
+        val = state.validation_report
+        md_content += f"""* **Files Compiled:** {val.files_compiled}
+* **Pytest Discovered:** {"YES" if val.pytest_discovered else "NO"}
+* **Tests Passed:** {val.tests_passed}
+* **Tests Failed:** {val.tests_failed}
+* **Validation Scorecard:**
+  - Syntax: `{val.syntax_status}`
+  - Imports: `{val.imports_status}`
+  - Tests: `{val.tests_status}`
+  - Build: `{val.build_status}`
+  - Lint: `{val.lint_status}`
+* **Analysis:** {val.explanation}
+"""
 
----
+    md_content += f"""
 
 ## 6. Evolution Suggestions
 * **Total Recommendations:** {sug_count}

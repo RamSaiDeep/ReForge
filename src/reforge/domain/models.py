@@ -183,6 +183,24 @@ class EvolutionReport(BaseModel):
     explanation: str = Field(..., description="Explainable summary of the project evolution plan")
 
 
+class ValidationReport(BaseModel):
+    """Stage 7 — Code Validation Report detailing compile, build, lint, and test results."""
+    overall_status: str = Field(..., description="Overall status outcome, e.g. PASSED, FAILED")
+    files_compiled: int = Field(default=0, description="Total number of python files compiled")
+    pytest_discovered: bool = Field(default=False, description="True if any test suite or test files were found")
+    tests_passed: int = Field(default=0, description="Count of successfully passed unit tests")
+    tests_failed: int = Field(default=0, description="Count of failed unit tests")
+    coverage_percentage: Optional[float] = Field(default=None, description="Discovered test coverage value")
+    
+    # Detailed Validation Scorecard:
+    syntax_status: str = Field(..., description="E.g., PASSED, FAILED")
+    imports_status: str = Field(..., description="E.g., PASSED, FAILED, WARNING")
+    tests_status: str = Field(..., description="E.g., PASSED, FAILED, SKIPPED")
+    build_status: str = Field(..., description="E.g., PASSED, FAILED")
+    lint_status: str = Field(..., description="E.g., PASSED, FAILED, WARNING")
+    explanation: str = Field(..., description="Explainable analysis of code validation results")
+
+
 class ExcavationState(BaseModel):
     """The complete, mutable blackboard state representing a project's excavation status."""
     project_id: str = Field(..., description="Unique identifier for the excavation project")
@@ -209,6 +227,9 @@ class ExcavationState(BaseModel):
     )
     restoration_plan: Optional[RestorationPlan] = Field(
         default=None, description="Restoration Plan strategy from Stage 5"
+    )
+    validation_report: Optional[ValidationReport] = Field(
+        default=None, description="Stage 7 Code Validation report metrics"
     )
     evolution_report: Optional[EvolutionReport] = Field(
         default=None, description="Evolution report suggestions from Stage 7"

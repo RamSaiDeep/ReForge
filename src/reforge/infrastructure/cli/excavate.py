@@ -244,9 +244,11 @@ async def run_excavation_workflow(target: str, project_id: Optional[str], auto_a
         report_dir = write_reports(project_id, state)
         console.print(f"\n[bold green]Excavation Completed Successfully![/bold green]")
         console.print(f"Archaeological report artifacts written to: [bold underline]{report_dir}[/bold underline]\n")
+        return state
 
     except Exception as err:
         console.print(f"\n[bold red][ERROR] Excavation failed:[/bold red] {err}")
+        raise err
     finally:
         if temp_dir and os.path.exists(temp_dir):
             try:

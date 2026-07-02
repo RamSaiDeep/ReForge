@@ -80,8 +80,14 @@ class LocalWorkspaceInspector(WorkspaceInspector):
     def _detect_architecture_paradigm(self, dependencies: List[str], directory_tree: Dict[str, List[str]], file_set: Set[str]) -> str:
         dep_set = {dep.lower() for dep in dependencies}
         
+        # Extract folder path parts (e.g. src/reforge/domain -> domain)
+        folders = set()
+        for folder in directory_tree.keys():
+            for part in folder.replace("\\", "/").split("/"):
+                if part:
+                    folders.add(part.lower())
+        
         # 1. Clean Architecture Check
-        folders = {folder.lower() for folder in directory_tree.keys()}
         clean_markers = {"domain", "usecases", "adapters", "infrastructure", "entities"}
         if len(folders.intersection(clean_markers)) >= 2:
             return "Clean Architecture"

@@ -8,7 +8,7 @@ def test_cli_version():
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert "ReForge Software Archaeology Platform" in result.stdout
-    assert "v0.2.0" in result.stdout
+    assert "v0.4.0" in result.stdout
 
 def test_cli_doctor():
     result = runner.invoke(app, ["doctor"])

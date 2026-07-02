@@ -113,6 +113,11 @@ class ProjectRepository(ABC):
         """List all current excavation projects."""
         pass
 
+    @abstractmethod
+    async def get_project_history(self, project_id: str) -> List[ExcavationState]:
+        """Retrieve all recorded historical snapshot runs for a given project, sorted chronologically."""
+        pass
+
 
 class ArchaeologyAgent(ABC):
     """Abstract base class representing an autonomous software archaeology agent."""

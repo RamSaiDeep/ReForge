@@ -351,6 +351,53 @@ This document tracks all project state updates, modifications, and architectural
 * **Decision:** Configured `JSONFileProjectRepository` inside `excavate` instead of `InMemoryProjectRepository`.
   * *Rationale:* Persists excavation progress on disk automatically, enabling command-line list, status, and report subcommands to retrieve it.
 
+---
+
+## [Phase 15] Smarter Validation (2026-07-02)
+
+### Phase Status
+* **Goal:** Upgrade Stage 7 Code Validation from a simple compile check into a robust testing, compilation, and lint diagnostics suite.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Pydantic Model updates:** Added `ValidationReport` Pydantic class to [models.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/domain/models.py) and registered it on `ExcavationState`.
+2. **Upgraded LocalCodeValidator:** Rewrote [code_validator.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/adapters/code_validator.py) to:
+   * Perform python syntax compilation checks via `py_compile`.
+   * Parse AST trees to identify unresolvable imports.
+   * Run pytest in a subprocess sandbox, capturing stdout and extracting test pass/fail metrics.
+   * Verify build system configuration existence and perform code style linting checks.
+3. **Scorecard Visualizers:** Configured scorecard panel rendering tables in `reforge excavate` and `reforge status` command outputs.
+4. **Unit Tests:** Updated validation agent tests in [test_validation_agent.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_validation_agent.py) to assert on `ValidationReport` metrics.
+
+### Key Decisions & Rationale
+* **Decision:** Excluded build manifest failure and lint warnings from failing the overall validation status.
+  * *Rationale:* Legacy repositories may lack modern lint files or build manifests but still compile and execute unit tests successfully.
+* **Decision:** Wrote PYTHONPATH configurations dynamically when executing pytest subprocesses.
+  * *Rationale:* Prevents module import resolution crashes when running pytest on isolated workspace directories.
+
+---
+
+## [Phase 16] Intelligent Restoration Planner (2026-07-02)
+
+### Phase Status
+* **Goal:** Extend Restoration Planning (Stage 5) to perform advanced archaeological audits of the codebase, checking for configuration issues, licenses, and deprecated libraries.
+* **Status:** Completed.
+
+### Executed Actions
+1. **Upgraded RestorationPlannerAgent:** Rewrote [restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/src/reforge/usecases/restoration_planner.py) to scan:
+   * Missing lockfiles (e.g., poetry.lock, package-lock.json).
+   * Missing CI/CD workflows (like GitHub Workflows).
+   * Missing license files (e.g. LICENSE).
+   * Outdated target Python version constraints (e.g., Python < 3.8 in pyproject.toml).
+   * Deprecated library imports (e.g., `imp`, `cgi`, `asyncore`, `pipes` which are removed in modern Python 3.12+).
+2. **Added Unit Tests:** Added `test_restoration_planner_archaeological_issues` in [test_restoration_planner.py](file:///c:/Users/vrams/OneDrive/Desktop/ReForge/tests/test_restoration_planner.py) and verified all 55 tests pass.
+3. **CLI duplicate safety:** Handled duplicate project errors in CLI `excavate` subcommand by overwriting the previous state instead of throwing a ValueError.
+
+### Key Decisions & Rationale
+* **Decision:** Configured deprecated Python libraries check (`imp`, `cgi`, `asyncore`, `pipes`).
+  * *Rationale:* Identifies critical breaking issues before updating target environments to modern Python runtime versions.
+
+
 
 
 
